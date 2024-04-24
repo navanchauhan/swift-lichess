@@ -24,7 +24,7 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "swift-lichessTests",
+            name: "LichessClientTests",
             dependencies: ["LichessClient"]),
     ]
 )

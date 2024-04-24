@@ -2,7 +2,7 @@ import XCTest
 
 @testable import LichessClient
 
-final class swift_lichessTests: XCTestCase {
+final class LichessClientTestsPac: XCTestCase {
 
   func testTablebaseLookup() async throws {
     let client = LichessClient()
