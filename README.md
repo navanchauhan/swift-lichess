@@ -339,3 +339,29 @@ let arenaBody = try await client.streamTeamArena(teamId: "lichess", max: 1)
 struct ArenaItem: Decodable {}
 for try await _ in Streaming.ndjsonStream(from: arenaBody, as: ArenaItem.self) { break }
 ```
+
+## Bulk Pairing
+
+```swift
+// Requires an authenticated client with `challenge:write` scope
+let client = LichessClient(accessToken: "<token>")
+
+// List your scheduled bulks
+let bulks = try await client.listBulkPairings()
+print(bulks.count)
+
+// Create a real-time bulk pairing for two games (example tokens)
+/*
+let created = try await client.createBulkPairing(
+  pairs: [(whiteToken: "tokenW1", blackToken: "tokenB1"), (whiteToken: "tokenW2", blackToken: "tokenB2")],
+  clockLimit: 600, clockIncrement: 2,
+  options: .init(variant: "standard", rated: true, message: "Good luck! {game}")
+)
+*/
+
+// Export games of a bulk as PGN
+if let first = bulks.first {
+  let body = try await client.exportBulkPairingGames(id: first.id, format: .pgn, moves: true)
+  for try await _ in body { /* consume */ }
+}
+```
