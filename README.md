@@ -155,6 +155,30 @@ let next = try await client.getNextPuzzle(angle: "mateIn2")
 print(next.puzzle.id)
 ```
 
+## Game Export / Import
+
+```swift
+import LichessClient
+
+let client = LichessClient()
+
+// Export one game as PGN
+let pgn = try await client.exportGame(id: "abcdefgh", format: .pgn)
+for try await _ in pgn { break }
+
+// Export recent games of a user (PGN or NDJSON)
+let userGames = try await client.exportUserGames(username: "thibault", format: .pgn, max: 10)
+for try await _ in userGames { /* consume */ }
+
+// Export specific games by IDs (NDJSON)
+let idsBody = try await client.exportGamesByIds(ids: ["abcdefgh", "ijklmnop"], format: .ndjson, moves: true)
+for try await _ in idsBody { break }
+
+// Import a PGN as a new game
+let res = try await client.importGame(pgn: "[Event \"Casual\"]\n1. e4 e5 *")
+print(res.id, res.url)
+```
+
 ## Crosstable
 
 ```swift
