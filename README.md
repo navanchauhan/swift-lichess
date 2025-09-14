@@ -135,6 +135,14 @@ let next = try await client.getNextPuzzle(angle: "mateIn2")
 print(next.puzzle.id)
 ```
 
+## Crosstable
+
+```swift
+let client = LichessClient()
+let ct = try await client.getCrosstable(user1: "drnykterstein", user2: "rebeccaharris")
+print(ct.nbGames, ct.scores)
+```
+
 ## Tablebase (Standard, Atomic, Antichess)
 
 ```swift
