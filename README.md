@@ -389,3 +389,27 @@ if let e = engines.first {
   // consume ndjson as needed
 }
 ```
+
+## Board API
+
+```swift
+// Board API typically requires an authenticated client with scopes
+let client = LichessClient(accessToken: "<token>")
+
+// Create a realtime seek (5+0), random color
+let result = try await client.createBoardSeek(
+  kind: .realtime(timeMinutes: 5, incrementSeconds: 0),
+  options: .init(rated: true, variant: "standard")
+)
+switch result {
+case .realtime(let body):
+  // stream NDJSON if provided
+  for try await _ in body { break }
+case .correspondence(let id):
+  print("Correspondence seek id:", id)
+}
+
+// Stream one game
+let nd = try await client.streamBoardGame(gameId: "<your-game-id>")
+for try await _ in Streaming.ndjsonStream(from: nd, as: Components.Schemas.OpenAPIRuntime.OpenAPIValueContainer.self) { break }
+```
