@@ -29,7 +29,7 @@ extension LichessClient {
     public let id: String
     public let name: String
     public let slug: String
-    public let description: String
+    public let description: String?
     public let markup: String?
     public let url: String?
   }
@@ -38,7 +38,8 @@ extension LichessClient {
     public let id: String
     public let name: String
     public let slug: String
-    public let startsAt: Date  // UNIX Epoch?
+    // Lichess returns milliseconds since epoch for startsAt; decode as Int64
+    public let startsAt: Int64
     public let finished: Bool?
     public let ongoing: Bool?
 
