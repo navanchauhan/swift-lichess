@@ -462,6 +462,15 @@ if let first = bulks.first {
 }
 ```
 
+### Admin (Challenge Tokens)
+
+```swift
+// Admin-only: create or reuse challenge:write tokens for users
+let admin = LichessClient(accessToken: "<admin_token>")
+let map = try await admin.adminCreateChallengeTokens(usernames: ["alice","bob"], description: "Bulk pairing")
+print(map["alice"] ?? "-")
+```
+
 ## External Engine
 
 ```swift
