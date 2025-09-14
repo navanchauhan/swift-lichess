@@ -65,6 +65,24 @@ let me = try await client.getMyProfile()
 let email = try await client.getMyEmail()
 ```
 
+### Bulk Users, Status, Current Game
+
+```swift
+let client = LichessClient()
+
+// Bulk fetch a few users
+let users = try await client.getUsers(usernames: ["thibault","lichess"])
+print(users.map(\.username))
+
+// Online/playing status for up to 100 ids
+let s = try await client.getUsersStatus(ids: ["thibault","lichess"], withSignal: true)
+print(s.first?.online == true)
+
+// Current game (PGN or JSON-as-body)
+let cg = try await client.getUserCurrentGame(username: "thibault", format: .pgn, moves: true)
+for try await _ in cg { break }
+```
+
 ### Autocomplete
 
 ```swift
