@@ -308,3 +308,10 @@ print(fide.name, fide.standard ?? -1)
 let matches = try await client.searchFIDEPlayers(query: "Carlsen")
 print(matches.prefix(3).map(\.name))
 ```
+## Streamers
+
+```swift
+let client = LichessClient()
+let live = try await client.getLiveStreamers()
+print(live.prefix(3).map { ($0.id, $0.service ?? "-") })
+```
