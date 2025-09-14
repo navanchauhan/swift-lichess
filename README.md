@@ -254,6 +254,17 @@ let importResult = try await client.importPGNIntoStudy(studyId: "lXnKRxIP", pgn:
 print(importResult.chapters.map { $0?.name ?? "-" })
 ```
 
+## Cloud Evaluation
+
+```swift
+let client = LichessClient()
+let fen = "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3"
+if let eval = try await client.getCloudEval(fen: fen, multiPv: 3) {
+  print("depth=\(eval.depth) knodes=\(eval.knodes)")
+  print(eval.pvs.first?.moves.joined(separator: " ") ?? "-")
+}
+```
+
 ## Diagnostics & Resilience
 
 ```swift
