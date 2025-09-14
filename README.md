@@ -188,6 +188,14 @@ print(p.game.perf.name, p.puzzle.rating)
 // Next puzzle (optionally filter by theme)
 let next = try await client.getNextPuzzle(angle: "mateIn2")
 print(next.puzzle.id)
+
+// Your puzzle activity (NDJSON stream)
+let act = try await client.getPuzzleActivity(max: 10)
+for try await _ in act { break }
+
+// Puzzle replay summary (30 days, theme "fork")
+let replay = try await client.getPuzzleReplay(days: 30, theme: "fork")
+print(replay?.remaining.count ?? 0)
 ```
 
 ## Game Export / Import
