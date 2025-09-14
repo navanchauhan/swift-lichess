@@ -428,3 +428,21 @@ for try await _ in bots { break }
 let gameBody = try await client.streamBotGame(gameId: "<game-id>")
 for try await _ in Streaming.ndjsonStream(from: gameBody, as: Components.Schemas.OpenAPIRuntime.OpenAPIValueContainer.self) { break }
 ```
+
+## Challenges
+
+```swift
+let client = LichessClient(accessToken: "<token>")
+
+// List challenges
+let challenges = try await client.listChallenges()
+print(challenges.incoming.count, challenges.outgoing.count)
+
+// Create a realtime challenge (3+2) to a user
+let created = try await client.createChallenge(
+  username: "thibault",
+  time: .realtime(limitSeconds: 180, incrementSeconds: 2),
+  options: .init(rated: true, color: "random", variant: "standard")
+)
+print(created.id)
+```

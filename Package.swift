@@ -90,6 +90,11 @@ let package = Package(
             dependencies: ["LichessClient"],
             path: "Examples/BotExample"
         ),
+        .executableTarget(
+            name: "ChallengesExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/ChallengesExample"
+        ),
         .testTarget(
             name: "LichessClientTests",
             dependencies: ["LichessClient"]),
