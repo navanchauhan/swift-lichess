@@ -284,3 +284,10 @@ let client = LichessClient(configuration: .init(
   rateLimitPolicy: .init(maxRetries: 1, defaultDelaySeconds: 60)
 ))
 ```
+## Simuls
+
+```swift
+let client = LichessClient()
+let simuls = try await client.getSimuls()
+print(simuls.created.count, simuls.started.count)
+```
