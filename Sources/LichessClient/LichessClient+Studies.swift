@@ -128,4 +128,40 @@ extension LichessClient {
       throw LichessClientError.undocumentedResponse(statusCode: status)
     }
   }
+
+  // MARK: - Maintenance
+  /// Delete a study chapter. Requires appropriate permissions on the study.
+  @discardableResult
+  public func deleteStudyChapter(studyId: String, chapterId: String) async throws -> Bool {
+    let resp = try await underlyingClient.apiStudyStudyIdChapterIdDelete(path: .init(studyId: studyId, chapterId: chapterId))
+    switch resp {
+    case .noContent: return true
+    case .undocumented(let s, _): throw LichessClientError.undocumentedResponse(statusCode: s)
+    }
+  }
+
+  /// HEAD request for the whole-study PGN to get Last-Modified.
+  /// - Returns: The `Last-Modified` header parsed as `Date` if present.
+  public func getStudyPGNLastModified(studyId: String) async throws -> Date? {
+    let resp = try await underlyingClient.studyAllChaptersHead(path: .init(studyId: studyId))
+    switch resp {
+    case .noContent(let nc):
+      if let lm = nc.headers.Last_hyphen_Modified {
+        return Self.parseHTTPDate(lm)
+      }
+      return nil
+    case .undocumented(let s, _):
+      throw LichessClientError.undocumentedResponse(statusCode: s)
+    }
+  }
+}
+
+private extension LichessClient {
+  static func parseHTTPDate(_ s: String) -> Date? {
+    let fmt = DateFormatter()
+    fmt.locale = Locale(identifier: "en_US_POSIX")
+    fmt.timeZone = TimeZone(secondsFromGMT: 0)
+    fmt.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+    return fmt.date(from: s)
+  }
 }

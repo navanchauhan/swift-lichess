@@ -363,6 +363,11 @@ let raw = "[Event \"A\"]\n\n1. e4 e5 *\n\n\n[Event \"B\"]\n\n1. d4 d5 *"
 let sanitized = PGNUtilities.sanitizeForImport(raw)
 let importResult = try await client.importPGNIntoStudy(studyId: "lXnKRxIP", pgn: sanitized)
 print(importResult.chapters.map { $0?.name ?? "-" })
+// Delete a chapter (requires permission)
+_ = try? await client.deleteStudyChapter(studyId: "lXnKRxIP", chapterId: "JT3RkEwv")
+// HEAD for last-modified of full PGN
+let lastMod = try await client.getStudyPGNLastModified(studyId: "lXnKRxIP")
+print(lastMod?.description ?? "-")
 ```
 
 ## Cloud Evaluation
