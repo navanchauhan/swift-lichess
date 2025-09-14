@@ -26,5 +26,22 @@ final class PuzzlesTests: XCTestCase {
     XCTAssertGreaterThan(byId.puzzle.solution.count, 0)
     XCTAssertFalse(byId.game.id.isEmpty)
   }
-}
 
+  func testNextPuzzleFetchWorksOrSkipsIfUnauthorized() async throws {
+    let client = LichessClient()
+    do {
+      let next = try await client.getNextPuzzle()
+      XCTAssertFalse(next.puzzle.id.isEmpty)
+      XCTAssertFalse(next.game.id.isEmpty)
+    } catch let error as LichessClient.LichessClientError {
+      switch error {
+      case .undocumentedResponse(let statusCode) where statusCode == 401:
+        throw XCTSkip("Requires puzzle:read scope; skipping in anonymous environment")
+      default:
+        throw error
+      }
+    } catch {
+      throw error
+    }
+  }
+}

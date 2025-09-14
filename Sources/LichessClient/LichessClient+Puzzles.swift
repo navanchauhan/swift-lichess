@@ -99,4 +99,15 @@ extension LichessClient {
       throw LichessClientError.undocumentedResponse(statusCode: statusCode)
     }
   }
+
+  public func getNextPuzzle(angle: String? = nil) async throws -> PuzzleAndGame {
+    let response = try await underlyingClient.apiPuzzleNext(query: .init(angle: angle))
+    switch response {
+    case .ok(let okResponse):
+      let payload = try okResponse.body.json
+      return convert(payload)
+    case .undocumented(let statusCode, _):
+      throw LichessClientError.undocumentedResponse(statusCode: statusCode)
+    }
+  }
 }
