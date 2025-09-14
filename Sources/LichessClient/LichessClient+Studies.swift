@@ -118,7 +118,7 @@ extension LichessClient {
       let chapters: [StudyImportChapter] = (payload.chapters ?? []).map { ch in
         let players = ch.players?.map { StudyImportPlayer(name: $0.name, rating: $0.rating) }
         return StudyImportChapter(id: ch.id, name: ch.name, players: players, status: ch.status)
-      } ?? []
+      }
       return StudyImportResult(chapters: chapters)
     case .badRequest(let bad):
       // Bubble up server-provided error message if available
@@ -129,4 +129,3 @@ extension LichessClient {
     }
   }
 }
-

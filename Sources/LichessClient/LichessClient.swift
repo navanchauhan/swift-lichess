@@ -21,9 +21,25 @@ public struct LichessClient {
     )
   }
 
-  enum LichessClientError: Error {
+  public enum LichessClientError: Error, Sendable, CustomStringConvertible {
     case undocumentedResponse(statusCode: Int)
     case parsingError(error: Error)
+    case unauthorized
+    case forbidden
+    case notFound
+    case tooManyRequests(retryAfterSeconds: Int?)
+    case httpStatus(statusCode: Int)
+    public var description: String {
+      switch self {
+      case .undocumentedResponse(let code): return "Undocumented response (status=\(code))"
+      case .parsingError(let err): return "Parsing error: \(err)"
+      case .unauthorized: return "Unauthorized (401)"
+      case .forbidden: return "Forbidden (403)"
+      case .notFound: return "Not found (404)"
+      case .tooManyRequests(let s): return "Too many requests (429), retryAfter=\(s.map(String.init) ?? "nil")"
+      case .httpStatus(let code): return "HTTP error (status=\(code))"
+      }
+    }
   }
 
   // MARK: - Configuration
@@ -38,6 +54,7 @@ public struct LichessClient {
     public var userAgent: String?
     public var maxConcurrentRequests: Int?
     public var retryPolicy: RetryPolicy?
+    public var rateLimitPolicy: RateLimitPolicy?
 
     public init(
       serverURL: URL = URL(string: "https://lichess.org")!,
@@ -48,7 +65,8 @@ public struct LichessClient {
       accessToken: String? = nil,
       userAgent: String? = nil,
       maxConcurrentRequests: Int? = nil,
-      retryPolicy: RetryPolicy? = nil
+      retryPolicy: RetryPolicy? = nil,
+      rateLimitPolicy: RateLimitPolicy? = nil
     ) {
       self.serverURL = serverURL
       self.tablebaseServerURL = tablebaseServerURL
@@ -59,6 +77,7 @@ public struct LichessClient {
       self.userAgent = userAgent
       self.maxConcurrentRequests = maxConcurrentRequests
       self.retryPolicy = retryPolicy
+      self.rateLimitPolicy = rateLimitPolicy
     }
   }
 
@@ -70,9 +89,8 @@ public struct LichessClient {
     if let max = configuration.maxConcurrentRequests, max > 0 {
       mws.append(ConcurrencyLimitMiddleware(maxConcurrentRequests: max))
     }
-    if let policy = configuration.retryPolicy {
-      mws.append(RetryMiddleware(policy: policy))
-    }
+    if let policy = configuration.retryPolicy { mws.append(RetryMiddleware(policy: policy)) }
+    if let rl = configuration.rateLimitPolicy { mws.append(RateLimitMiddleware(policy: rl)) }
     if let ua = configuration.userAgent, !ua.isEmpty {
       mws.append(UserAgentMiddleware(userAgent: ua))
     }
