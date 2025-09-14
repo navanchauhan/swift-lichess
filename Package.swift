@@ -80,6 +80,11 @@ let package = Package(
             dependencies: ["LichessClient"],
             path: "Examples/ExternalEngineExample"
         ),
+        .executableTarget(
+            name: "BoardExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/BoardExample"
+        ),
         .testTarget(
             name: "LichessClientTests",
             dependencies: ["LichessClient"]),
