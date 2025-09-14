@@ -2,6 +2,83 @@ import Foundation
 import OpenAPIRuntime
 import HTTPTypes
 
+public struct LoggingConfiguration: Sendable {
+  public enum Level: String, Sendable { case info, debug }
+  public var enabled: Bool
+  public var level: Level
+  public var logBodies: Bool
+  public var redactHeaders: [HTTPField.Name]
+  public var sink: @Sendable (String) -> Void
+  public init(
+    enabled: Bool = false,
+    level: Level = .info,
+    logBodies: Bool = false,
+    redactHeaders: [HTTPField.Name] = [.authorization],
+    sink: @escaping @Sendable (String) -> Void = { print($0) }
+  ) {
+    self.enabled = enabled
+    self.level = level
+    self.logBodies = logBodies
+    self.redactHeaders = redactHeaders
+    self.sink = sink
+  }
+}
+
+public struct LoggingMiddleware: ClientMiddleware {
+  let configuration: LoggingConfiguration
+  public init(configuration: LoggingConfiguration = LoggingConfiguration(enabled: true)) {
+    self.configuration = configuration
+  }
+  public func intercept(
+    _ request: HTTPRequest,
+    body: HTTPBody?,
+    baseURL: URL,
+    operationID: String,
+    next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
+  ) async throws -> (HTTPResponse, HTTPBody?) {
+    if !configuration.enabled {
+      return try await next(request, body, baseURL)
+    }
+
+    let start = Date()
+    var headerPreview: [String: String] = [:]
+    for field in request.headerFields {
+      let name = field.name
+      let value = field.value
+      if configuration.redactHeaders.contains(name) {
+        headerPreview[name.canonicalName] = "<redacted>"
+      } else {
+        headerPreview[name.canonicalName] = value
+      }
+    }
+    configuration.sink("➡️ [\(configuration.level.rawValue)] \(request.method.rawValue) \(baseURL) op=\(operationID) headers=\(headerPreview)")
+    if configuration.logBodies, let body = body {
+      configuration.sink("  ↳ request body: \(describeBody(body))")
+    }
+
+    do {
+      let (response, responseBody) = try await next(request, body, baseURL)
+      let durMs = durationMS(since: start)
+      configuration.sink("✅ [\(configuration.level.rawValue)] \(Int(response.status.code)) op=\(operationID) in \(durMs)ms")
+      if configuration.logBodies, let responseBody = responseBody {
+        configuration.sink("  ↙︎ response body: \(describeBody(responseBody))")
+      }
+      return (response, responseBody)
+    } catch {
+      let durMs = durationMS(since: start)
+      configuration.sink("❌ [\(configuration.level.rawValue)] error op=\(operationID) in \(durMs)ms: \(error)")
+      throw error
+    }
+  }
+
+  private func describeBody(_ body: HTTPBody) -> String {
+    return "<stream>"
+  }
+  private func durationMS(since start: Date) -> Int {
+    Int(Date().timeIntervalSince(start) * 1000.0)
+  }
+}
+
 public struct TokenAuthMiddleware: ClientMiddleware {
   public let token: String
   public init(token: String) { self.token = token }
