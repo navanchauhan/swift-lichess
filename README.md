@@ -315,3 +315,27 @@ let client = LichessClient()
 let live = try await client.getLiveStreamers()
 print(live.prefix(3).map { ($0.id, $0.service ?? "-") })
 ```
+
+## Teams
+
+```swift
+let client = LichessClient()
+
+// Team details
+let team = try await client.getTeam(id: "lichess")
+print(team.name, team.nbMembers ?? 0)
+
+// Popular and search
+let popular = try await client.getPopularTeams(page: 1)
+let search = try await client.searchTeams(text: "chess", page: 1)
+print(popular.results.count, search.results.count)
+
+// Teams of a user
+let userTeams = try await client.getTeams(of: "thibault")
+print(userTeams.map(\.name))
+
+// Streams (NDJSON)
+let arenaBody = try await client.streamTeamArena(teamId: "lichess", max: 1)
+struct ArenaItem: Decodable {}
+for try await _ in Streaming.ndjsonStream(from: arenaBody, as: ArenaItem.self) { break }
+```
