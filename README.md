@@ -298,3 +298,13 @@ let client = LichessClient()
 let simuls = try await client.getSimuls()
 print(simuls.created.count, simuls.started.count)
 ```
+## FIDE
+
+```swift
+let client = LichessClient()
+let fide = try await client.getFIDEPlayer(id: 750419)
+print(fide.name, fide.standard ?? -1)
+
+let matches = try await client.searchFIDEPlayers(query: "Carlsen")
+print(matches.prefix(3).map(\.name))
+```
