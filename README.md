@@ -365,3 +365,27 @@ if let first = bulks.first {
   for try await _ in body { /* consume */ }
 }
 ```
+
+## External Engine
+
+```swift
+// Requires auth; register/list your external engines
+let client = LichessClient(accessToken: "<token>")
+
+let engines = try await client.listExternalEngines()
+if let e = engines.first {
+  let common = LichessClient.ExternalEngineWorkCommon(
+    sessionId: UUID().uuidString,
+    threads: min(1, e.maxThreads),
+    hash: min(16, e.maxHash),
+    multiPv: 1,
+    variant: "chess",
+    initialFEN: "startpos",
+    moves: []
+  )
+  let ndjson = try await client.analyseWithExternalEngine(
+    id: e.id, clientSecret: e.clientSecret, work: .depth(ply: 5, common: common)
+  )
+  // consume ndjson as needed
+}
+```
