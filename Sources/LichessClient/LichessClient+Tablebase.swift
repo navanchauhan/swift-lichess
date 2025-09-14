@@ -140,13 +140,74 @@ extension LichessClient {
     }
   }
 
-  public func getAtomicTablebase(fen: String) {
-    fatalError("getAtomicTablebase(fen: String) has not been implemented yet. Please file an issue")
+  public func getAtomicTablebase(fen: String) async throws -> TablebaseLookup {
+    let response = try await underlyingTablebaseClient.tablebaseAtomic(query: .init(fen: fen))
+    switch response {
+    case .ok(let okResponse):
+      switch okResponse.body {
+      case .json(let tablebaseJson):
+        var tablebaseLookup = TablebaseLookup(
+          dtz: tablebaseJson.dtz, precise_dtz: tablebaseJson.precise_dtz, dtm: tablebaseJson.dtm,
+          checkmate: tablebaseJson.checkmate, stalemate: tablebaseJson.stalemate,
+          variant_win: tablebaseJson.variant_win, variant_loss: tablebaseJson.variant_loss,
+          insufficient_material: tablebaseJson.insufficient_material,
+          category: convertCategoryTablebaseJson(payload: tablebaseJson.category), moves: [])
+
+        guard let moves = tablebaseJson.moves else {
+          return tablebaseLookup
+        }
+        var tablebaseMoves: [TablebaseMove] = []
+        for move in moves {
+          let tablebaseMove = TablebaseMove(
+            uci: move.uci, san: move.san, dtz: move.dtz, precise_dtz: move.precise_dtz,
+            dtm: move.dtm, zeroing: move.zeroing, checkmate: move.checkmate,
+            stalemate: move.stalemate, variant_win: move.variant_win,
+            variant_loss: move.variant_loss, insufficient_material: move.insufficient_material,
+            category: convertCategoryTablebaseJsonMoves(payload: move.category))
+          tablebaseMoves.append(tablebaseMove)
+        }
+        tablebaseLookup.moves = tablebaseMoves
+        return tablebaseLookup
+
+      }
+    case .undocumented(let statusCode, _):
+      throw LichessClientError.undocumentedResponse(statusCode: statusCode)
+    }
   }
 
-  public func getAntichessTablebase(fen: String) {
-    fatalError(
-      "getAntichessTablebase(fen: String) has not been implemented yet. Please file an issue")
+  public func getAntichessTablebase(fen: String) async throws -> TablebaseLookup {
+    let response = try await underlyingTablebaseClient.antichessAtomic(query: .init(fen: fen))
+    switch response {
+    case .ok(let okResponse):
+      switch okResponse.body {
+      case .json(let tablebaseJson):
+        var tablebaseLookup = TablebaseLookup(
+          dtz: tablebaseJson.dtz, precise_dtz: tablebaseJson.precise_dtz, dtm: tablebaseJson.dtm,
+          checkmate: tablebaseJson.checkmate, stalemate: tablebaseJson.stalemate,
+          variant_win: tablebaseJson.variant_win, variant_loss: tablebaseJson.variant_loss,
+          insufficient_material: tablebaseJson.insufficient_material,
+          category: convertCategoryTablebaseJson(payload: tablebaseJson.category), moves: [])
+
+        guard let moves = tablebaseJson.moves else {
+          return tablebaseLookup
+        }
+        var tablebaseMoves: [TablebaseMove] = []
+        for move in moves {
+          let tablebaseMove = TablebaseMove(
+            uci: move.uci, san: move.san, dtz: move.dtz, precise_dtz: move.precise_dtz,
+            dtm: move.dtm, zeroing: move.zeroing, checkmate: move.checkmate,
+            stalemate: move.stalemate, variant_win: move.variant_win,
+            variant_loss: move.variant_loss, insufficient_material: move.insufficient_material,
+            category: convertCategoryTablebaseJsonMoves(payload: move.category))
+          tablebaseMoves.append(tablebaseMove)
+        }
+        tablebaseLookup.moves = tablebaseMoves
+        return tablebaseLookup
+
+      }
+    case .undocumented(let statusCode, _):
+      throw LichessClientError.undocumentedResponse(statusCode: statusCode)
+    }
   }
 
 }
