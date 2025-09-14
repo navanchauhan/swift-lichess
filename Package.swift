@@ -55,6 +55,11 @@ let package = Package(
             dependencies: ["LichessClient"],
             path: "Examples/CrosstableExample"
         ),
+        .executableTarget(
+            name: "SimulsExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/SimulsExample"
+        ),
         .testTarget(
             name: "LichessClientTests",
             dependencies: ["LichessClient"]),
