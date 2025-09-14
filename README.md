@@ -117,6 +117,26 @@ let blitzTop = try await client.getLeaderboard(perfType: "blitz", nb: 50)
 print(blitzTop.first?.username ?? "-")
 ```
 
+## Broadcasts
+
+```swift
+import LichessClient
+
+let client = LichessClient()
+
+// Top broadcasts (active, upcoming, and past pages)
+let top = try await client.getTopBroadcasts(page: 1)
+print("Active: \(top.active.count), Upcoming: \(top.upcoming.count)")
+
+// Round details
+let details = try await client.broadcastRound(broadcastRoundId: "<round-id>")
+print(details.tour.name, details.round.name, details.games.count)
+
+// All rounds PGN for a tournament
+let pgnAll = try await client.getBroadcastAllRoundsPGN(tournamentId: "<tour-id>")
+for try await _ in pgnAll { break } // consume stream
+```
+
 ## Puzzles
 
 ```swift
