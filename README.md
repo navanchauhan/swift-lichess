@@ -103,6 +103,20 @@ for try await item in Streaming.ndjsonStream(from: body, as: Item.self) {
 }
 ```
 
+## Players (Leaderboards)
+
+```swift
+let client = LichessClient()
+
+// All Top-10 lists per perf key
+let top = try await client.getAllTop10()
+print("Top-10 Bullet count:", top["bullet"]?.count ?? 0)
+
+// One leaderboard (up to 200 entries)
+let blitzTop = try await client.getLeaderboard(perfType: "blitz", nb: 50)
+print(blitzTop.first?.username ?? "-")
+```
+
 ## Puzzles
 
 ```swift
