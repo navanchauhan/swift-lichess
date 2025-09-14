@@ -2,6 +2,52 @@
 
 API Client for Lichess. The end goal of this package is to implement everything listed in the OpenAPI Reference (2.0.0)
 
+## API Coverage
+
+- Generated operations (from OpenAPI): 176
+- Public wrappers referencing generated operations: 176
+- Coverage: 100%
+
+Unique operations wrapped by area:
+- Users: 20
+- Teams: 15
+- Broadcasts: 17
+- Tournaments: 13
+- Board API: 12
+- Bot API: 12
+- Swiss: 9
+- Puzzles: 9
+- Game Export/Import: 9
+- External Engine: 8
+- Studies: 7
+- Bulk Pairing: 6
+- OAuth/PKCE: 4
+- Opening Explorer: 4
+- TV: 3
+- Tablebase: 3
+- Players: 2
+- Streams (NDJSON helpers): 2
+- FIDE: 2
+- Account: 4
+- Streamers: 1
+- Crosstable: 1
+- Simuls: 1
+- Events: 1
+- Cloud Evaluation: 1
+- Timeline: 1
+
+To recompute these totals locally:
+
+```
+# Unique generated operations
+rg -N --no-filename -o '^\s*internal func\s+([A-Za-z0-9_]+)\(' \
+  Sources/LichessClient/GeneratedSources/Client.swift | sort -u | wc -l
+
+# Unique operations referenced by public wrappers
+rg -N --no-filename -o 'underlying(Client|TablebaseClient)\.([A-Za-z0-9_]+)\(' \
+  Sources/LichessClient/LichessClient+*.swift | sed -E 's/.*\.([A-Za-z0-9_]+)\(.*/\1/' | sort -u | wc -l
+```
+
 ## Example
 
 ```swift

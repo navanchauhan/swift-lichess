@@ -133,4 +133,35 @@ extension LichessClient {
       throw LichessClientError.undocumentedResponse(statusCode: status)
     }
   }
+
+  // MARK: - Authorization endpoint wrapper
+  // Typically you should use `buildAuthorizationURL(...)` and open it in a browser.
+  // This wrapper exists to provide parity with the generated `GET /oauth` operation.
+  @discardableResult
+  public func requestAuthorization(
+    clientID: String,
+    redirectURI: URL,
+    scopes: [String],
+    state: String,
+    username: String? = nil,
+    pkce: PKCE
+  ) async throws -> Bool {
+    let query = Operations.oauth.Input.Query(
+      response_type: .code,
+      client_id: clientID,
+      redirect_uri: redirectURI.absoluteString,
+      code_challenge_method: .S256,
+      code_challenge: pkce.codeChallenge,
+      scope: scopes.isEmpty ? nil : scopes.joined(separator: " "),
+      username: username,
+      state: state
+    )
+    let response = try await underlyingClient.oauth(query: query)
+    switch response {
+    case .ok:
+      return true
+    case .undocumented(let status, _):
+      throw LichessClientError.undocumentedResponse(statusCode: status)
+    }
+  }
 }
