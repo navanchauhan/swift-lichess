@@ -107,7 +107,7 @@ extension LichessClient {
     }
   }
 
-  public struct Tournament: Codable {
+  public struct Tournament: Codable, Sendable {
     public let id: String
     public let name: String
     public let slug: String
@@ -116,7 +116,7 @@ extension LichessClient {
     public let url: String?
   }
 
-  public struct Round: Codable, Identifiable {
+  public struct Round: Codable, Identifiable, Sendable {
     public let id: String
     public let name: String
     public let slug: String
