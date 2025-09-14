@@ -413,3 +413,18 @@ case .correspondence(let id):
 let nd = try await client.streamBoardGame(gameId: "<your-game-id>")
 for try await _ in Streaming.ndjsonStream(from: nd, as: Components.Schemas.OpenAPIRuntime.OpenAPIValueContainer.self) { break }
 ```
+
+## Bot API
+
+```swift
+// Most Bot endpoints require a Bot account + token (bot:play scope)
+let client = LichessClient(accessToken: "<token>")
+
+// Online bots stream
+let bots = try await client.streamOnlineBots()
+for try await _ in bots { break }
+
+// Stream a bot game
+let gameBody = try await client.streamBotGame(gameId: "<game-id>")
+for try await _ in Streaming.ndjsonStream(from: gameBody, as: Components.Schemas.OpenAPIRuntime.OpenAPIValueContainer.self) { break }
+```
