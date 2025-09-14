@@ -65,6 +65,26 @@ let me = try await client.getMyProfile()
 let email = try await client.getMyEmail()
 ```
 
+## Account
+
+```swift
+import LichessClient
+
+let client = LichessClient(accessToken: "<token>")
+
+// Preferences & language
+let prefs = try await client.getMyPreferences()
+print(prefs.language ?? "-", prefs.dark ?? false)
+
+// Kid mode
+let kid = try await client.getKidMode()
+_ = try await client.setKidMode(kid) // no-op
+
+// Ongoing games
+let mine = try await client.getMyOngoingGames(nb: 5)
+print(mine.first?.gameId ?? "-")
+```
+
 ## Configuration, Transport, and Auth
 
 ```swift
