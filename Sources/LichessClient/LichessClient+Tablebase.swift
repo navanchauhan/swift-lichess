@@ -114,7 +114,7 @@ extension LichessClient {
         var tablebaseLookup = TablebaseLookup(
           dtz: tablebaseJson.dtz, precise_dtz: tablebaseJson.precise_dtz, dtm: tablebaseJson.dtm,
           checkmate: tablebaseJson.checkmate, stalemate: tablebaseJson.stalemate,
-          variant_win: tablebaseJson.variant_win, variant_loss: tablebaseJson.variant_win,
+          variant_win: tablebaseJson.variant_win, variant_loss: tablebaseJson.variant_loss,
           insufficient_material: tablebaseJson.insufficient_material,
           category: convertCategoryTablebaseJson(payload: tablebaseJson.category), moves: [])
 
