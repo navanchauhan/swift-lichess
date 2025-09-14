@@ -18,6 +18,39 @@ Task {
 }
 ```
 
+## OAuth / PKCE
+
+```swift
+import LichessClient
+
+let pkce = LichessClient.generatePKCE()
+let state = UUID().uuidString
+let redirect = URL(string: "myapp://callback")!
+
+// 1) Send user to this URL (open in browser / webview)
+let authURL = LichessClient().buildAuthorizationURL(
+  clientID: "myapp",
+  redirectURI: redirect,
+  scopes: ["challenge:write", "email:read"],
+  state: state,
+  pkce: pkce
+)
+
+// 2) Handle redirect back to your app and extract the `code`
+// let code = ...
+
+// 3) Exchange code for token
+let token = try await LichessClient().exchangeCodeForToken(
+  clientID: "myapp",
+  code: code,
+  redirectURI: redirect,
+  codeVerifier: pkce.codeVerifier
+)
+
+// 4) Create an authenticated client
+let authed = LichessClient(accessToken: token.accessToken)
+```
+
 ## Configuration, Transport, and Auth
 
 ```swift
