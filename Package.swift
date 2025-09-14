@@ -41,6 +41,11 @@ let package = Package(
             path: "Examples/TVChannelsExample"
         ),
         .executableTarget(
+            name: "OpeningExplorerExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/OpeningExplorerExample"
+        ),
+        .executableTarget(
             name: "PlayersExample",
             dependencies: ["LichessClient"],
             path: "Examples/PlayersExample"
