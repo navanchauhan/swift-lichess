@@ -67,3 +67,24 @@ let client = LichessClient(configuration: .init(
   // middlewares: [MyMiddleware()]
 ))
 ```
+
+## Streams (NDJSON)
+
+```swift
+import LichessClient
+
+let client = LichessClient()
+
+// Example: consume official broadcasts stream
+let stream = try await client.broadcastIndex(nb: 5)
+for try await t in stream {
+  print(t.tour.name)
+}
+
+// Or decode any NDJSON HTTPBody into a typed stream
+struct Item: Decodable { let a: Int }
+let body: HTTPBody = HTTPBody("{\"a\":1}\n{\"a\":2}\n")
+for try await item in Streaming.ndjsonStream(from: body, as: Item.self) {
+  print(item)
+}
+```
