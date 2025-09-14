@@ -290,6 +290,9 @@ let playerBody = try await client.streamOpeningExplorerPlayer(
 for try await item in Streaming.ndjsonStream(from: playerBody, as: Components.Schemas.OpeningExplorerPlayer.self) {
   print(item)
 }
+// Fetch PGN of a Masters game by id
+let mastersPGN = try await client.getOpeningExplorerMastersGamePGN(gameId: "<game-id>")
+for try await _ in mastersPGN { break }
 ```
 
 ## Tournaments & Swiss

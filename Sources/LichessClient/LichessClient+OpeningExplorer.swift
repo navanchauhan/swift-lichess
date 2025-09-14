@@ -244,4 +244,21 @@ extension LichessClient {
       throw LichessClientError.undocumentedResponse(statusCode: statusCode)
     }
   }
+
+  // MARK: Masters game PGN
+  /// Fetch the PGN of a Masters database game by its ID.
+  /// - Parameter gameId: Masters game identifier returned by explorer endpoints.
+  /// - Returns: The PGN payload as `HTTPBody`.
+  public func getOpeningExplorerMastersGamePGN(gameId: String) async throws -> HTTPBody {
+    let resp = try await underlyingClient.openingExplorerMasterGame(
+      path: .init(gameId: gameId),
+      headers: .init(accept: [.init(contentType: .application_x_hyphen_chess_hyphen_pgn)])
+    )
+    switch resp {
+    case .ok(let ok):
+      return try ok.body.application_x_hyphen_chess_hyphen_pgn
+    case .undocumented(let s, _):
+      throw LichessClientError.undocumentedResponse(statusCode: s)
+    }
+  }
 }
