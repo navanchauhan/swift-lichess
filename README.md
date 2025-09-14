@@ -2,6 +2,19 @@
 
 API Client for Lichess. The end goal of this package is to implement everything listed in the OpenAPI Reference (2.0.0)
 
+## Documentation
+
+This package ships comprehensive DocC documentation compiled from the inline
+doc comments and additional guides.
+
+- Browse locally: `./scripts/generate-docs.sh` then open `docs/index.html`.
+- SwiftPM: `swift package generate-documentation --target LichessClient`.
+- Xcode: Product → Build Documentation.
+
+If you enable GitHub Pages for this repo, set it to serve from the `docs/`
+folder on the default branch. The provided script generates a static site that
+works with Pages; the hosting base path is `swift-lichess`.
+
 ## API Coverage
 
 - Generated operations (from OpenAPI): 176
