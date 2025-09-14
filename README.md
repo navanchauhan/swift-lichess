@@ -51,6 +51,20 @@ let token = try await LichessClient().exchangeCodeForToken(
 let authed = LichessClient(accessToken: token.accessToken)
 ```
 
+## Users & Profiles
+
+```swift
+import LichessClient
+
+let client = LichessClient()
+let user = try await client.getUser(username: "thibault")
+print(user.username, user.title ?? "-")
+
+// If authenticated
+let me = try await client.getMyProfile()
+let email = try await client.getMyEmail()
+```
+
 ## Configuration, Transport, and Auth
 
 ```swift
