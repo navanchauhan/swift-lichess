@@ -33,6 +33,7 @@ import HTTPTypes
 /// - [Python Board API for Certabo](https://github.com/haklein/certabo-lichess)
 /// - [Java general API](https://github.com/tors42/chariot)
 /// - [JavaScript & TypeScript general API](https://github.com/devjiwonchoi/equine)
+/// - [LichessNET - C# API Wrapper](https://github.com/Rabergsel/LichessNET)
 ///
 /// ## Rate limiting
 /// All requests are rate limited using various strategies,
@@ -55,6 +56,14 @@ import HTTPTypes
 /// - [Generate a personal access token](https://lichess.org/account/oauth/token)
 /// - `curl https://lichess.org/api/account -H "Authorization: Bearer {token}"`
 /// - [NodeJS example](https://github.com/lichess-org/api/tree/master/example/oauth-personal-token)
+///
+/// ### Token Security
+/// - Keep your tokens secret. Do not share them in public repositories or public forums.
+/// - Your tokens can be used to make your account perform arbitrary actions (within the limits of the tokens' scope). You remain responsible for all activities on your account.
+/// - Do not hardcode tokens in your application's code. Use environment variables or a secure storage and ensure they are not shipped/exposed to users. Be especially careful that they are not included in frontend bundles or apps that are shipped to users.
+/// - If you suspect a token has been compromised, revoke it immediately.
+///
+/// To see your active tokens or revoke them, see [your Personal API access tokens](https://lichess.org/account/oauth/token).
 ///
 /// ### Authorization Code Flow with PKCE
 /// The authorization code flow with PKCE allows your users to **login with Lichess**.
@@ -145,8 +154,22 @@ internal struct Client: APIProtocol {
                     in: &request,
                     style: .form,
                     explode: true,
+                    name: "withSignal",
+                    value: input.query.withSignal
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
                     name: "withGameIds",
                     value: input.query.withGameIds
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "withGameMetas",
+                    value: input.query.withGameMetas
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
@@ -625,7 +648,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            [Components.Schemas.UserActivity].self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -794,6 +817,95 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Get a new puzzle
+    ///
+    /// Get a random Lichess puzzle in JSON format.
+    ///
+    /// If authenticated, only returns puzzles that the user has never seen before.
+    ///
+    /// **DO NOT** use this endpoint to enumerate puzzles for mass download. Instead, download the [full public puzzle database](https://database.lichess.org/#puzzles).
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/puzzle/next`.
+    /// - Remark: Generated from `#/paths//api/puzzle/next/get(apiPuzzleNext)`.
+    internal func apiPuzzleNext(_ input: Operations.apiPuzzleNext.Input) async throws -> Operations.apiPuzzleNext.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.apiPuzzleNext.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/puzzle/next",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "angle",
+                    value: input.query.angle
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "difficulty",
+                    value: input.query.difficulty
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.apiPuzzleNext.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.apiPuzzleNext.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.PuzzleAndGame.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Get your puzzle activity
     ///
     /// Download your puzzle activity in [ndjson](#section/Introduction/Streaming-with-ND-JSON) format.
@@ -881,6 +993,101 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Get puzzles to replay
+    ///
+    /// Gets the puzzle IDs of remaining puzzles to re-attempt in JSON format.
+    ///
+    /// - Remark: HTTP `GET /api/puzzle/replay/{days}/{theme}`.
+    /// - Remark: Generated from `#/paths//api/puzzle/replay/{days}/{theme}/get(apiPuzzleReplay)`.
+    internal func apiPuzzleReplay(_ input: Operations.apiPuzzleReplay.Input) async throws -> Operations.apiPuzzleReplay.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.apiPuzzleReplay.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/puzzle/replay/{}/{}",
+                    parameters: [
+                        input.path.days,
+                        input.path.theme
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.apiPuzzleReplay.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.apiPuzzleReplay.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.PuzzleReplay.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                case 404:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.apiPuzzleReplay.Output.NotFound.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.apiPuzzleReplay.Output.NotFound.Body.jsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .notFound(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Get your puzzle dashboard
     ///
     /// Download your [puzzle dashboard](https://lichess.org/training/dashboard/30/dashboard) as JSON.
@@ -931,7 +1138,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.PuzzleDashboardJson.self,
+                            Components.Schemas.PuzzleDashboard.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -1013,7 +1220,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.StormDashboardJson.self,
+                            Components.Schemas.PuzzleStormDashboard.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -1087,7 +1294,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.PuzzleRaceJson.self,
+                            Components.Schemas.PuzzleRacer.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -1100,6 +1307,106 @@ internal struct Client: APIProtocol {
                         headers: headers,
                         body: body
                     ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get puzzle race results
+    ///
+    /// Get the results of a [puzzle race](https://lichess.org/racer).
+    /// Returns information about players, puzzles, and the current status of the race.
+    /// - <https://lichess.org/racer>
+    ///
+    /// Note that Lichess puzzle races are not persisted, and are only available
+    /// for 30 minutes. After that delay, they are permanently deleted.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/racer/{id}`.
+    /// - Remark: Generated from `#/paths//api/racer/{id}/get(racerGet)`.
+    internal func racerGet(_ input: Operations.racerGet.Input) async throws -> Operations.racerGet.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.racerGet.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/racer/{}",
+                    parameters: [
+                        input.path.id
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.racerGet.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.racerGet.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.PuzzleRaceResults.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                case 404:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.racerGet.Output.NotFound.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.NotFound.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .notFound(.init(body: body))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,
@@ -1738,8 +2045,8 @@ internal struct Client: APIProtocol {
                     in: &request,
                     style: .form,
                     explode: true,
-                    name: "players",
-                    value: input.query.players
+                    name: "withBookmarked",
+                    value: input.query.withBookmarked
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
@@ -1887,13 +2194,6 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "literate",
                     value: input.query.literate
-                )
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "players",
-                    value: input.query.players
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
@@ -2128,8 +2428,8 @@ internal struct Client: APIProtocol {
                     in: &request,
                     style: .form,
                     explode: true,
-                    name: "players",
-                    value: input.query.players
+                    name: "withBookmarked",
+                    value: input.query.withBookmarked
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
@@ -2284,13 +2584,6 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "literate",
                     value: input.query.literate
-                )
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "players",
-                    value: input.query.players
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
@@ -2677,7 +2970,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            Operations.apiAccountPlaying.Output.Ok.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -2707,7 +3000,7 @@ internal struct Client: APIProtocol {
     /// Stream positions and moves of any ongoing game, in [ndjson](#section/Introduction/Streaming-with-ND-JSON).
     /// A description of the game is sent as a first message.
     /// Then a message is sent each time a move is played.
-    /// Finally a description of the game is sent when it finishes, and the stream is closed.
+    /// Finally, a description of the game is sent when it finishes, and the stream is closed.
     /// Ongoing games are delayed by a few seconds ranging from 3 to 60 depending on the time control, as to prevent cheat bots from using this API.
     /// No more than 8 game streams can be opened at the same time from the same IP address.
     ///
@@ -2760,6 +3053,28 @@ internal struct Client: APIProtocol {
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
                     return .ok(.init(body: body))
+                case 429:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.streamGame.Output.TooManyRequests.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.streamGame.Output.TooManyRequests.Body.jsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .tooManyRequests(.init(body: body))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,
@@ -2777,7 +3092,7 @@ internal struct Client: APIProtocol {
     /// Import a game from PGN. See <https://lichess.org/paste>.
     /// Rate limiting: 200 games per hour for OAuth requests, 100 games per hour for anonymous requests.
     /// To broadcast ongoing games, consider [pushing to a broadcast instead](#operation/broadcastPush).
-    /// To analyse a position or a line, just construct an analysis board URL:
+    /// To analyse a position or a line, just construct an analysis board URL (most standard tags supported if URL-encoded):
     /// [https://lichess.org/analysis/pgn/e4_e5_Nf3_Nc6_Bc4_Bc5_Bxf7+](https://lichess.org/analysis/pgn/e4_e5_Nf3_Nc6_Bc4_Bc5_Bxf7+)
     ///
     ///
@@ -2831,7 +3146,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            Operations.gameImport.Output.Ok.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -2926,6 +3241,186 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Export your bookmarked games
+    ///
+    /// Download all games bookmarked by you, in PGN or [ndjson](#section/Introduction/Streaming-with-ND-JSON) format.
+    /// Games are sorted by reverse chronological order (most recent first).
+    /// We recommend streaming the response, for it can be very long.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/games/export/bookmarks`.
+    /// - Remark: Generated from `#/paths//api/games/export/bookmarks/get(apiExportBookmarks)`.
+    internal func apiExportBookmarks(_ input: Operations.apiExportBookmarks.Input) async throws -> Operations.apiExportBookmarks.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.apiExportBookmarks.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/games/export/bookmarks",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "since",
+                    value: input.query.since
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "until",
+                    value: input.query.until
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "max",
+                    value: input.query.max
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "moves",
+                    value: input.query.moves
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "pgnInJson",
+                    value: input.query.pgnInJson
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "tags",
+                    value: input.query.tags
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "clocks",
+                    value: input.query.clocks
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "evals",
+                    value: input.query.evals
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "accuracy",
+                    value: input.query.accuracy
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "opening",
+                    value: input.query.opening
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "division",
+                    value: input.query.division
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "literate",
+                    value: input.query.literate
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "lastFen",
+                    value: input.query.lastFen
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "sort",
+                    value: input.query.sort
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.apiExportBookmarks.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.apiExportBookmarks.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/x-chess-pgn",
+                            "application/x-ndjson"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/x-chess-pgn":
+                        body = try converter.getResponseBodyAsBinary(
+                            OpenAPIRuntime.HTTPBody.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .application_x_hyphen_chess_hyphen_pgn(value)
+                            }
+                        )
+                    case "application/x-ndjson":
+                        body = try converter.getResponseBodyAsBinary(
+                            OpenAPIRuntime.HTTPBody.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .application_x_hyphen_ndjson(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Get current TV games
     ///
     /// Get basic info about the best games being played for each speed and variant,
@@ -2974,7 +3469,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            Operations.tvChannels.Output.Ok.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -3002,7 +3497,6 @@ internal struct Client: APIProtocol {
     /// Stream current TV game
     ///
     /// Stream positions and moves of the current [TV game](https://lichess.org/tv) in [ndjson](#section/Introduction/Streaming-with-ND-JSON).
-    /// A summary of the game is sent as a first message, and when the featured game changes.
     /// Try it with `curl https://lichess.org/api/tv/feed`.
     ///
     ///
@@ -3066,8 +3560,7 @@ internal struct Client: APIProtocol {
     }
     /// Stream current TV game of a TV channel
     ///
-    /// Stream positions and moves of the current [TV game](https://lichess.org/tv) of a TV channel in [ndjson](#section/Introduction/Streaming-with-ND-JSON).
-    /// A summary of the game is sent as a first message, and when the featured game changes.
+    /// Stream positions and moves of a current [TV channel's game](https://lichess.org/tv/rapid) in [ndjson](#section/Introduction/Streaming-with-ND-JSON).
     /// Try it with `curl https://lichess.org/api/tv/rapid/feed`.
     ///
     ///
@@ -3250,7 +3743,7 @@ internal struct Client: APIProtocol {
     }
     /// Get current tournaments
     ///
-    /// Get recently finished, ongoing, and upcoming tournaments.
+    /// Get recently active and finished tournaments.
     /// This API is used to display the [Lichess tournament schedule](https://lichess.org/tournament).
     ///
     ///
@@ -3382,7 +3875,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.ArenaTournamentVariantIsKey.self,
+                            Components.Schemas.ArenaTournamentFull.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -3484,7 +3977,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.ArenaTournamentVariantIsKey.self,
+                            Components.Schemas.ArenaTournamentFull.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -3572,7 +4065,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.ArenaTournamentVariantIsKey.self,
+                            Components.Schemas.ArenaTournamentFull.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -3649,8 +4142,10 @@ internal struct Client: APIProtocol {
                 )
                 let body: OpenAPIRuntime.HTTPBody?
                 switch input.body {
+                case .none:
+                    body = nil
                 case let .urlEncodedForm(value):
-                    body = try converter.setRequiredRequestBodyAsURLEncodedForm(
+                    body = try converter.setOptionalRequestBodyAsURLEncodedForm(
                         value,
                         headerFields: &request.headerFields,
                         contentType: "application/x-www-form-urlencoded"
@@ -3973,7 +4468,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.ArenaTournamentVariantIsKey.self,
+                            Components.Schemas.ArenaTournamentFull.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -4308,7 +4803,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            Operations.teamsByTournament.Output.Ok.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -4338,6 +4833,10 @@ internal struct Client: APIProtocol {
     /// Get all tournaments created by a given user.
     /// Tournaments are sorted by reverse chronological order of start date (last starting first).
     /// Tournaments are streamed as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
+    /// The stream is throttled, depending on who is making the request:
+    ///   - Anonymous request: 20 tournaments per second
+    ///   - [OAuth2 authenticated](#section/Introduction/Authentication) request: 30 tournaments per second
+    ///   - Authenticated, downloading your own tournaments: 50 tournaments per second
     ///
     ///
     /// - Remark: HTTP `GET /api/user/{username}/tournament/created`.
@@ -4362,6 +4861,13 @@ internal struct Client: APIProtocol {
                     in: &request,
                     style: .form,
                     explode: true,
+                    name: "nb",
+                    value: input.query.nb
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
                     name: "status",
                     value: input.query.status
                 )
@@ -4381,6 +4887,99 @@ internal struct Client: APIProtocol {
                     ))
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
                     let body: Operations.apiUserNameTournamentCreated.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/x-ndjson"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/x-ndjson":
+                        body = try converter.getResponseBodyAsBinary(
+                            OpenAPIRuntime.HTTPBody.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .application_x_hyphen_ndjson(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get tournaments played by a user
+    ///
+    /// Get all tournaments played by a given user.
+    /// Tournaments are sorted by reverse chronological order of start date (last played first).
+    /// Tournaments are streamed as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
+    /// The stream is throttled, depending on who is making the request:
+    ///   - Anonymous request: 20 tournaments per second
+    ///   - [OAuth2 authenticated](#section/Introduction/Authentication) request: 30 tournaments per second
+    ///   - Authenticated, downloading your own tournaments: 50 tournaments per second
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/user/{username}/tournament/played`.
+    /// - Remark: Generated from `#/paths//api/user/{username}/tournament/played/get(apiUserNameTournamentPlayed)`.
+    internal func apiUserNameTournamentPlayed(_ input: Operations.apiUserNameTournamentPlayed.Input) async throws -> Operations.apiUserNameTournamentPlayed.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.apiUserNameTournamentPlayed.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/user/{}/tournament/played",
+                    parameters: [
+                        input.path.username
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "nb",
+                    value: input.query.nb
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "performance",
+                    value: input.query.performance
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.apiUserNameTournamentPlayed.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.apiUserNameTournamentPlayed.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -4861,8 +5460,10 @@ internal struct Client: APIProtocol {
                 )
                 let body: OpenAPIRuntime.HTTPBody?
                 switch input.body {
+                case .none:
+                    body = nil
                 case let .urlEncodedForm(value):
-                    body = try converter.setRequiredRequestBodyAsURLEncodedForm(
+                    body = try converter.setOptionalRequestBodyAsURLEncodedForm(
                         value,
                         headerFields: &request.headerFields,
                         contentType: "application/x-www-form-urlencoded"
@@ -5183,7 +5784,7 @@ internal struct Client: APIProtocol {
     /// Export games of a Swiss tournament
     ///
     /// Download games of a swiss tournament in PGN or [ndjson](#section/Introduction/Streaming-with-ND-JSON) format.
-    /// Games are sorted by reverse chronological order (last round first).
+    /// Games are sorted by chronological order.
     /// The game stream is throttled, depending on who is making the request:
     ///   - Anonymous request: 20 games per second
     ///   - [OAuth2 authenticated](#section/Introduction/Authentication) request: 30 games per second
@@ -5445,6 +6046,27 @@ internal struct Client: APIProtocol {
                     name: "max",
                     value: input.query.max
                 )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "status",
+                    value: input.query.status
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "createdBy",
+                    value: input.query.createdBy
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "name",
+                    value: input.query.name
+                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -5464,16 +6086,16 @@ internal struct Client: APIProtocol {
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
-                            "application/nd-json"
+                            "application/x-ndjson"
                         ]
                     )
                     switch chosenContentType {
-                    case "application/nd-json":
+                    case "application/x-ndjson":
                         body = try converter.getResponseBodyAsBinary(
                             OpenAPIRuntime.HTTPBody.self,
                             from: responseBody,
                             transforming: { value in
-                                .application_nd_hyphen_json(value)
+                                .application_x_hyphen_ndjson(value)
                             }
                         )
                     default:
@@ -5539,13 +6161,6 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "variations",
                     value: input.query.variations
-                )
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "source",
-                    value: input.query.source
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
@@ -5644,13 +6259,6 @@ internal struct Client: APIProtocol {
                     in: &request,
                     style: .form,
                     explode: true,
-                    name: "source",
-                    value: input.query.source
-                )
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
                     name: "orientation",
                     value: input.query.orientation
                 )
@@ -5738,8 +6346,8 @@ internal struct Client: APIProtocol {
             },
             deserializer: { response, responseBody in
                 switch response.status.code {
-                case 200:
-                    let headers: Operations.studyAllChaptersHead.Output.Ok.Headers = .init(
+                case 204:
+                    let headers: Operations.studyAllChaptersHead.Output.NoContent.Headers = .init(
                         Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
                             in: response.headerFields,
                             name: "Access-Control-Allow-Origin",
@@ -5751,7 +6359,7 @@ internal struct Client: APIProtocol {
                             as: Swift.String.self
                         )
                     )
-                    return .ok(.init(headers: headers))
+                    return .noContent(.init(headers: headers))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,
@@ -5916,13 +6524,6 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "variations",
                     value: input.query.variations
-                )
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "source",
-                    value: input.query.source
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
@@ -6100,17 +6701,17 @@ internal struct Client: APIProtocol {
     }
     /// Get official broadcasts
     ///
-    /// Get all incoming, ongoing, and finished official broadcasts.
-    /// The broadcasts are sorted by start date, most recent first.
+    /// Returns ongoing official broadcasts sorted by tier. 
+    /// After that, returns finished broadcasts sorted by most recent sync time.
     /// Broadcasts are streamed as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
     ///
     ///
     /// - Remark: HTTP `GET /api/broadcast`.
-    /// - Remark: Generated from `#/paths//api/broadcast/get(broadcastIndex)`.
-    internal func broadcastIndex(_ input: Operations.broadcastIndex.Input) async throws -> Operations.broadcastIndex.Output {
+    /// - Remark: Generated from `#/paths//api/broadcast/get(broadcastsOfficial)`.
+    internal func broadcastsOfficial(_ input: Operations.broadcastsOfficial.Input) async throws -> Operations.broadcastsOfficial.Output {
         try await client.send(
             input: input,
-            forOperation: Operations.broadcastIndex.id,
+            forOperation: Operations.broadcastsOfficial.id,
             serializer: { input in
                 let path = try converter.renderedPath(
                     template: "/api/broadcast",
@@ -6128,6 +6729,13 @@ internal struct Client: APIProtocol {
                     name: "nb",
                     value: input.query.nb
                 )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "html",
+                    value: input.query.html
+                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -6137,13 +6745,13 @@ internal struct Client: APIProtocol {
             deserializer: { response, responseBody in
                 switch response.status.code {
                 case 200:
-                    let headers: Operations.broadcastIndex.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                    let headers: Operations.broadcastsOfficial.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
                         in: response.headerFields,
                         name: "Access-Control-Allow-Origin",
                         as: Swift.String.self
                     ))
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.broadcastIndex.Output.Ok.Body
+                    let body: Operations.broadcastsOfficial.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -6157,6 +6765,264 @@ internal struct Client: APIProtocol {
                             from: responseBody,
                             transforming: { value in
                                 .application_x_hyphen_ndjson(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get paginated top broadcast previews
+    ///
+    /// The same data, in the same order, as can be seen on [https://lichess.org/broadcast](/broadcast).
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/broadcast/top`.
+    /// - Remark: Generated from `#/paths//api/broadcast/top/get(broadcastsTop)`.
+    internal func broadcastsTop(_ input: Operations.broadcastsTop.Input) async throws -> Operations.broadcastsTop.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.broadcastsTop.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/broadcast/top",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "page",
+                    value: input.query.page
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "html",
+                    value: input.query.html
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.broadcastsTop.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.broadcastsTop.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.BroadcastTop.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get broadcasts created by a user
+    ///
+    /// Get all incoming, ongoing, and finished official broadcasts.
+    /// The broadcasts are sorted by created date, most recent first.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/broadcast/by/{username}`.
+    /// - Remark: Generated from `#/paths//api/broadcast/by/{username}/get(broadcastsByUser)`.
+    internal func broadcastsByUser(_ input: Operations.broadcastsByUser.Input) async throws -> Operations.broadcastsByUser.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.broadcastsByUser.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/broadcast/by/{}",
+                    parameters: [
+                        input.path.username
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "page",
+                    value: input.query.page
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "html",
+                    value: input.query.html
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.broadcastsByUser.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.broadcastsByUser.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.broadcastsByUser.Output.Ok.Body.jsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Search broadcasts
+    ///
+    /// Search across recent official broadcasts.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/broadcast/search`.
+    /// - Remark: Generated from `#/paths//api/broadcast/search/get(broadcastsSearch)`.
+    internal func broadcastsSearch(_ input: Operations.broadcastsSearch.Input) async throws -> Operations.broadcastsSearch.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.broadcastsSearch.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/broadcast/search",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "page",
+                    value: input.query.page
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "q",
+                    value: input.query.q
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.broadcastsSearch.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.broadcastsSearch.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.broadcastsSearch.Output.Ok.Body.jsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
                             }
                         )
                     default:
@@ -6234,7 +7100,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.BroadcastTour.self,
+                            Components.Schemas.BroadcastWithRounds.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -6324,7 +7190,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.BroadcastTour.self,
+                            Components.Schemas.BroadcastWithRounds.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -6346,20 +7212,20 @@ internal struct Client: APIProtocol {
             }
         )
     }
-    /// Get a broadcast leaderboard
+    /// Get players of a broadcast
     ///
-    /// Get the leaderboard of a broadcast tournament, if available.
+    /// Get the list of players of a broadcast tournament, if available.
     ///
     ///
-    /// - Remark: HTTP `GET /broadcast/{broadcastTournamentId}/leaderboard`.
-    /// - Remark: Generated from `#/paths//broadcast/{broadcastTournamentId}/leaderboard/get(broadcastLeaderboardGet)`.
-    internal func broadcastLeaderboardGet(_ input: Operations.broadcastLeaderboardGet.Input) async throws -> Operations.broadcastLeaderboardGet.Output {
+    /// - Remark: HTTP `GET /broadcast/{broadcastTournamentId}/players`.
+    /// - Remark: Generated from `#/paths//broadcast/{broadcastTournamentId}/players/get(broadcastPlayersGet)`.
+    internal func broadcastPlayersGet(_ input: Operations.broadcastPlayersGet.Input) async throws -> Operations.broadcastPlayersGet.Output {
         try await client.send(
             input: input,
-            forOperation: Operations.broadcastLeaderboardGet.id,
+            forOperation: Operations.broadcastPlayersGet.id,
             serializer: { input in
                 let path = try converter.renderedPath(
-                    template: "/broadcast/{}/leaderboard",
+                    template: "/broadcast/{}/players",
                     parameters: [
                         input.path.broadcastTournamentId
                     ]
@@ -6379,7 +7245,7 @@ internal struct Client: APIProtocol {
                 switch response.status.code {
                 case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.broadcastLeaderboardGet.Output.Ok.Body
+                    let body: Operations.broadcastPlayersGet.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -6389,7 +7255,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            [Components.Schemas.BroadcastLeaderboardEntry].self,
+                            [Components.Schemas.BroadcastPlayerEntry].self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -6522,6 +7388,8 @@ internal struct Client: APIProtocol {
     /// Create a new broadcast round to relay external games.
     /// This endpoint accepts the same form data as the web form.
     ///
+    /// Choose one between `syncUrl`, `syncUrls`, `syncIds` and `syncUsers`, if it is missing, the broadcast needs to be fed by [pushing PGN to it](#operation/broadcastPush)
+    ///
     ///
     /// - Remark: HTTP `POST /broadcast/{broadcastTournamentId}/new`.
     /// - Remark: Generated from `#/paths//broadcast/{broadcastTournamentId}/new/post(broadcastRoundCreate)`.
@@ -6575,7 +7443,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.BroadcastRound.self,
+                            Components.Schemas.BroadcastRoundNew.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -6689,9 +7557,9 @@ internal struct Client: APIProtocol {
             }
         )
     }
-    /// Update your broadcast round
+    /// Update a broadcast round
     ///
-    /// Update information about a broadcast round that you created.
+    /// Update information about a broadcast round.
     /// This endpoint accepts the same form data as the web form.
     /// All fields must be populated with data. Missing fields will override the broadcast with empty data.
     /// For instance, if you omit `startDate`, then any pre-existing start date will be removed.
@@ -6749,7 +7617,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.Ok.self,
+                            Components.Schemas.BroadcastRound.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -6796,21 +7664,94 @@ internal struct Client: APIProtocol {
             }
         )
     }
-    /// Push PGN to your broadcast round
+    /// Reset a broadcast round
     ///
-    /// Update your broadcast with new PGN.
-    /// Only for broadcast without a source URL.
+    /// Remove any games from the broadcast round and reset it to its initial state.
     ///
     ///
-    /// - Remark: HTTP `POST /broadcast/round/{broadcastRoundId}/push`.
-    /// - Remark: Generated from `#/paths//broadcast/round/{broadcastRoundId}/push/post(broadcastPush)`.
+    /// - Remark: HTTP `POST /api/broadcast/round/{broadcastRoundId}/reset`.
+    /// - Remark: Generated from `#/paths//api/broadcast/round/{broadcastRoundId}/reset/post(broadcastRoundReset)`.
+    internal func broadcastRoundReset(_ input: Operations.broadcastRoundReset.Input) async throws -> Operations.broadcastRoundReset.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.broadcastRoundReset.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/broadcast/round/{}/reset",
+                    parameters: [
+                        input.path.broadcastRoundId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.broadcastRoundReset.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.broadcastRoundReset.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Ok.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Push PGN to a broadcast round
+    ///
+    /// Update a broadcast with new PGN.
+    /// Only for broadcasts without a source URL.
+    ///
+    ///
+    /// - Remark: HTTP `POST /api/broadcast/round/{broadcastRoundId}/push`.
+    /// - Remark: Generated from `#/paths//api/broadcast/round/{broadcastRoundId}/push/post(broadcastPush)`.
     internal func broadcastPush(_ input: Operations.broadcastPush.Input) async throws -> Operations.broadcastPush.Output {
         try await client.send(
             input: input,
             forOperation: Operations.broadcastPush.id,
             serializer: { input in
                 let path = try converter.renderedPath(
-                    template: "/broadcast/round/{}/push",
+                    template: "/api/broadcast/round/{}/push",
                     parameters: [
                         input.path.broadcastRoundId
                     ]
@@ -6909,12 +7850,12 @@ internal struct Client: APIProtocol {
             }
         )
     }
-    /// Stream an ongoing broadcast tournament as PGN
+    /// Stream an ongoing broadcast round as PGN
     ///
-    /// This streaming endpoint first sends all games of a broadcast tournament in PGN format.
+    /// This streaming endpoint first sends all games of a broadcast round in PGN format.
     /// Then, it waits for new moves to be played. As soon as it happens, the entire PGN of the game is sent to the stream.
-    /// The stream will also send PGNs when games are added to the tournament.
-    /// This is the best way to get updates about an ongoing tournament. Streaming means no polling,
+    /// The stream will also send PGNs when games are added to the round.
+    /// This is the best way to get updates about an ongoing round. Streaming means no polling,
     /// and no pollings means no latency, and minimum impact on the server.
     ///
     ///
@@ -7184,13 +8125,78 @@ internal struct Client: APIProtocol {
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
+                            "application/x-ndjson"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/x-ndjson":
+                        body = try converter.getResponseBodyAsBinary(
+                            OpenAPIRuntime.HTTPBody.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .application_x_hyphen_ndjson(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Get a FIDE player
+    ///
+    /// Get information about a FIDE player.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/fide/player/{playerId}`.
+    /// - Remark: Generated from `#/paths//api/fide/player/{playerId}/get(fidePlayerGet)`.
+    internal func fidePlayerGet(_ input: Operations.fidePlayerGet.Input) async throws -> Operations.fidePlayerGet.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.fidePlayerGet.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/fide/player/{}",
+                    parameters: [
+                        input.path.playerId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.fidePlayerGet.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
                             "application/json"
                         ]
                     )
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.BroadcastMyRound.self,
+                            Components.Schemas.FIDEPlayer.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -7200,6 +8206,84 @@ internal struct Client: APIProtocol {
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
                     return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Search FIDE players
+    ///
+    /// List of FIDE players search results for a query.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/fide/player`.
+    /// - Remark: Generated from `#/paths//api/fide/player/get(fidePlayerSearch)`.
+    internal func fidePlayerSearch(_ input: Operations.fidePlayerSearch.Input) async throws -> Operations.fidePlayerSearch.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.fidePlayerSearch.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/fide/player",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "q",
+                    value: input.query.q
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.fidePlayerSearch.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.fidePlayerSearch.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            [Components.Schemas.FIDEPlayer].self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,
@@ -7598,7 +8682,7 @@ internal struct Client: APIProtocol {
     ///
     /// Members are sorted by reverse chronological order of joining the team (most recent first).
     /// OAuth is only required if the list of members is private.
-    /// Members are streamed as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
+    /// Up to 5,000 users are streamed as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
     ///
     ///
     /// - Remark: HTTP `GET /api/team/{teamId}/users`.
@@ -7619,6 +8703,13 @@ internal struct Client: APIProtocol {
                     method: .get
                 )
                 suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "full",
+                    value: input.query.full
+                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -7700,6 +8791,27 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "max",
                     value: input.query.max
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "status",
+                    value: input.query.status
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "createdBy",
+                    value: input.query.createdBy
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "name",
+                    value: input.query.name
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
@@ -7785,8 +8897,10 @@ internal struct Client: APIProtocol {
                 )
                 let body: OpenAPIRuntime.HTTPBody?
                 switch input.body {
+                case .none:
+                    body = nil
                 case let .urlEncodedForm(value):
-                    body = try converter.setRequiredRequestBodyAsURLEncodedForm(
+                    body = try converter.setOptionalRequestBodyAsURLEncodedForm(
                         value,
                         headerFields: &request.headerFields,
                         contentType: "application/x-www-form-urlencoded"
@@ -8317,7 +9431,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            [Components.Schemas.LightUser].self,
+                            Operations.streamerLive.Output.Ok.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -8463,8 +9577,36 @@ internal struct Client: APIProtocol {
                     in: &request,
                     style: .form,
                     explode: true,
+                    name: "names",
+                    value: input.query.names
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
                     name: "friend",
                     value: input.query.friend
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "team",
+                    value: input.query.team
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "tour",
+                    value: input.query.tour
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "swiss",
+                    value: input.query.swiss
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
@@ -8864,21 +10006,153 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Block a player
+    ///
+    /// Block a player, adding them to your list of blocked Lichess users.
+    ///
+    ///
+    /// - Remark: HTTP `POST /api/rel/block/{username}`.
+    /// - Remark: Generated from `#/paths//api/rel/block/{username}/post(blockUser)`.
+    internal func blockUser(_ input: Operations.blockUser.Input) async throws -> Operations.blockUser.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.blockUser.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/rel/block/{}",
+                    parameters: [
+                        input.path.username
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.blockUser.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Ok.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Unblock a player
+    ///
+    /// Unblock a player, removing them from your list of blocked Lichess users.
+    ///
+    ///
+    /// - Remark: HTTP `POST /api/rel/unblock/{username}`.
+    /// - Remark: Generated from `#/paths//api/rel/unblock/{username}/post(unblockUser)`.
+    internal func unblockUser(_ input: Operations.unblockUser.Input) async throws -> Operations.unblockUser.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.unblockUser.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/rel/unblock/{}",
+                    parameters: [
+                        input.path.username
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.unblockUser.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Ok.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Stream incoming events
     ///
+    /// Stream the events reaching a lichess user in real time as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
     ///
-    ///   Stream the events reaching a lichess user in real time as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
+    /// An empty line is sent every 7 seconds for keep alive purposes.
     ///
-    ///   An empty line is sent every 6 seconds for keep alive purposes.
+    /// Each non-empty line is a JSON object containing a `type` field. Possible values are:
+    /// - `gameStart` Start of a game
+    /// - `gameFinish` Completion of a game
+    /// - `challenge` A player sends you a challenge or you challenge someone
+    /// - `challengeCanceled` A player cancels their challenge to you
+    /// - `challengeDeclined` The opponent declines your challenge
     ///
-    ///   Each non-empty line is a JSON object containing a `type` field. Possible values are:
-    ///   - `gameStart` Start of a game
-    ///   - `gameFinish` Completion of a game
-    ///   - `challenge` A player sends you a challenge or you challenge someone
-    ///   - `challengeCanceled` A player cancels their challenge to you
-    ///   - `challengeDeclined` The opponent declines your challenge
-    ///  
-    ///   When the stream opens, all current challenges and games are sent.
+    /// When the stream opens, all current challenges and games are sent.
+    ///
+    /// Only one global event stream can be active at a time. When the stream opens, the previous one with the same access token is closed.
+    ///
     ///
     /// - Remark: HTTP `GET /api/stream/event`.
     /// - Remark: Generated from `#/paths//api/stream/event/get(apiStreamEvent)`.
@@ -8948,25 +10222,27 @@ internal struct Client: APIProtocol {
     }
     /// Create a seek
     ///
+    /// Create a public seek, to start a game with a random player.
     ///
-    ///   Create a public seek, to start a game with a random player.
+    /// ### Real-time seek
     ///
-    ///   ### Real-time seek
+    /// Specify the `time` and `increment` clock values.
+    /// The response is streamed but doesn't contain any information.
     ///
-    ///   Specify the `time` and `increment` clock values.  The response is streamed but doesn't contain any information.
+    /// **Keep the connection open to keep the seek active**.
     ///
-    ///   **Keep the connection open to keep the seek active**.
+    /// If the client closes the connection, the seek is canceled. This way, if the client terminates, the user won't be paired in a game they wouldn't play.
+    /// When the seek is accepted, or expires, the server closes the connection.
     ///
-    ///   If the client closes the connection, the seek is canceled. This way, if the client terminates, the user won't be paired in a game they wouldn't play.
-    ///   When the seek is accepted, or expires, the server closes the connection.
+    /// **Make sure to also have an [Event stream](#operation/apiStreamEvent) open**, to be notified when a game starts.
+    /// We recommend opening the [Event stream](#operation/apiStreamEvent) first, then the seek stream. This way,
+    /// you won't miss the game event if the seek is accepted immediately.
     ///
-    ///   **Make sure to also have an [Event stream](#operation/apiStreamEvent) open**, to be notified when a game starts.
-    ///   We recommend opening the [Event stream](#operation/apiStreamEvent) first, then the seek stream. This way,
-    ///   you won't miss the game event if the seek is accepted immediately.
+    /// ### Correspondence seek
     ///
-    ///   ### Correspondence seek
+    /// Specify the `days` per turn value.
+    /// The response is not streamed, it immediately completes with the seek ID. The seek remains active on the server until it is joined by someone.
     ///
-    ///   Specify the `days` per turn value.  The response is not streamed, it immediately completes with the seek ID. The seek remains active on the server until it is joined by someone.
     ///
     /// - Remark: HTTP `POST /api/board/seek`.
     /// - Remark: Generated from `#/paths//api/board/seek/post(apiBoardSeek)`.
@@ -8990,8 +10266,10 @@ internal struct Client: APIProtocol {
                 )
                 let body: OpenAPIRuntime.HTTPBody?
                 switch input.body {
+                case .none:
+                    body = nil
                 case let .urlEncodedForm(value):
-                    body = try converter.setRequiredRequestBodyAsURLEncodedForm(
+                    body = try converter.setOptionalRequestBodyAsURLEncodedForm(
                         value,
                         headerFields: &request.headerFields,
                         contentType: "application/x-www-form-urlencoded"
@@ -9012,16 +10290,25 @@ internal struct Client: APIProtocol {
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
-                            "text/plain"
+                            "application/json",
+                            "application/x-ndjson"
                         ]
                     )
                     switch chosenContentType {
-                    case "text/plain":
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.apiBoardSeek.Output.Ok.Body.jsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    case "application/x-ndjson":
                         body = try converter.getResponseBodyAsBinary(
                             OpenAPIRuntime.HTTPBody.self,
                             from: responseBody,
                             transforming: { value in
-                                .plainText(value)
+                                .application_x_hyphen_ndjson(value)
                             }
                         )
                     default:
@@ -9067,7 +10354,7 @@ internal struct Client: APIProtocol {
     }
     /// Stream Board game state
     ///
-    ///  Stream the state of a game being played with the Board API, as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
+    /// Stream the state of a game being played with the Board API, as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
     ///
     /// Use this endpoint to get updates about the game in real-time, with a single request.
     ///
@@ -9075,14 +10362,12 @@ internal struct Client: APIProtocol {
     ///   - `gameFull` Full game data. All values are immutable, except for the `state` field.
     ///   - `gameState` Current state of the game. Immutable values not included. Sent when a move is played, a draw is offered, or when the game ends.
     ///   - `chatLine` Chat message sent by a user in the `room` "player" or "spectator".
-    ///
     ///   - `opponentGone` Whether the opponent has left the game, and how long before you can claim a win or draw.
     ///
-    ///  
     /// The first line is always of type `gameFull`.
     ///
-    ///  
     /// The server closes the stream when the game ends, or if the game has already ended.
+    ///
     ///
     /// - Remark: HTTP `GET /api/board/game/stream/{gameId}`.
     /// - Remark: Generated from `#/paths//api/board/game/stream/{gameId}/get(boardGameStream)`.
@@ -9936,6 +11221,101 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Claim draw of a game
+    ///
+    /// Claim draw when the opponent has left the game for a while.
+    ///
+    ///
+    /// - Remark: HTTP `POST /api/board/game/{gameId}/claim-draw`.
+    /// - Remark: Generated from `#/paths//api/board/game/{gameId}/claim-draw/post(boardGameClaimDraw)`.
+    internal func boardGameClaimDraw(_ input: Operations.boardGameClaimDraw.Input) async throws -> Operations.boardGameClaimDraw.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.boardGameClaimDraw.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/board/game/{}/claim-draw",
+                    parameters: [
+                        input.path.gameId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.boardGameClaimDraw.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.boardGameClaimDraw.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Ok.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                case 400:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.boardGameClaimDraw.Output.BadRequest.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas._Error.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .badRequest(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Berserk a tournament game
     ///
     /// Go berserk on an arena tournament game. Halves the clock time, grants an extra point upon winning.
@@ -10210,19 +11590,15 @@ internal struct Client: APIProtocol {
     }
     /// Stream Bot game state
     ///
-    ///  Stream the state of a game being played with the Bot API, as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
-    ///
+    /// Stream the state of a game being played with the Bot API, as [ndjson](#section/Introduction/Streaming-with-ND-JSON).
     /// Use this endpoint to get updates about the game in real-time, with a single request.
-    ///
     /// Each line is a JSON object containing a `type` field. Possible values are:
-    ///   - `gameFull` Full game data. All values are immutable, except for the `state` field.
-    ///   - `gameState` Current state of the game. Immutable values not included.
-    ///   - `chatLine` Chat message sent by a user (or the bot itself) in the `room` "player" or "spectator".
-    ///
-    ///   - `opponentGone` Whether the opponent has left the game, and how long before you can claim a win or draw.
-    ///
-    ///  
+    /// - `gameFull` Full game data. All values are immutable, except for the `state` field.
+    /// - `gameState` Current state of the game. Immutable values not included.
+    /// - `chatLine` Chat message sent by a user (or the bot itself) in the `room` "player" or "spectator".
+    /// - `opponentGone` Whether the opponent has left the game, and how long before you can claim a win or draw.
     /// The first line is always of type `gameFull`.
+    ///
     ///
     /// - Remark: HTTP `GET /api/bot/game/stream/{gameId}`.
     /// - Remark: Generated from `#/paths//api/bot/game/stream/{gameId}/get(botGameStream)`.
@@ -10981,6 +12357,196 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Claim victory of a game
+    ///
+    /// Claim victory when the opponent has left the game for a while.
+    ///
+    ///
+    /// - Remark: HTTP `POST /api/bot/game/{gameId}/claim-victory`.
+    /// - Remark: Generated from `#/paths//api/bot/game/{gameId}/claim-victory/post(botGameClaimVictory)`.
+    internal func botGameClaimVictory(_ input: Operations.botGameClaimVictory.Input) async throws -> Operations.botGameClaimVictory.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.botGameClaimVictory.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/bot/game/{}/claim-victory",
+                    parameters: [
+                        input.path.gameId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.botGameClaimVictory.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.botGameClaimVictory.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Ok.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                case 400:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.botGameClaimVictory.Output.BadRequest.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas._Error.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .badRequest(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// Claim draw of a game
+    ///
+    /// Claim draw when the opponent has left the game for a while.
+    ///
+    ///
+    /// - Remark: HTTP `POST /api/bot/game/{gameId}/claim-draw`.
+    /// - Remark: Generated from `#/paths//api/bot/game/{gameId}/claim-draw/post(botGameClaimDraw)`.
+    internal func botGameClaimDraw(_ input: Operations.botGameClaimDraw.Input) async throws -> Operations.botGameClaimDraw.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.botGameClaimDraw.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/bot/game/{}/claim-draw",
+                    parameters: [
+                        input.path.gameId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.botGameClaimDraw.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.botGameClaimDraw.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.Ok.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                case 400:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.botGameClaimDraw.Output.BadRequest.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas._Error.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .badRequest(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// List your challenges
     ///
     /// Get a list of challenges created by or targeted at you.
@@ -11085,8 +12651,10 @@ internal struct Client: APIProtocol {
                 )
                 let body: OpenAPIRuntime.HTTPBody?
                 switch input.body {
+                case .none:
+                    body = nil
                 case let .urlEncodedForm(value):
-                    body = try converter.setRequiredRequestBodyAsURLEncodedForm(
+                    body = try converter.setOptionalRequestBodyAsURLEncodedForm(
                         value,
                         headerFields: &request.headerFields,
                         contentType: "application/x-www-form-urlencoded"
@@ -11113,7 +12681,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Operations.challengeCreate.Output.Ok.Body.jsonPayload.self,
+                            Components.Schemas.ChallengeJson.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -11160,6 +12728,79 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Show one challenge
+    ///
+    /// Get details about a challenge, even if it has been recently accepted, canceled or declined.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/challenge/{challengeId}/show`.
+    /// - Remark: Generated from `#/paths//api/challenge/{challengeId}/show/get(challengeShow)`.
+    internal func challengeShow(_ input: Operations.challengeShow.Input) async throws -> Operations.challengeShow.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.challengeShow.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/challenge/{}/show",
+                    parameters: [
+                        input.path.challengeId
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.challengeShow.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.challengeShow.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ChallengeJson.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Accept a challenge
     ///
     /// Accept an incoming challenge.
@@ -11184,6 +12825,13 @@ internal struct Client: APIProtocol {
                     method: .post
                 )
                 suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "color",
+                    value: input.query.color
+                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -11522,7 +13170,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.GameJson.self,
+                            Operations.challengeAi.Output.Created.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -11604,8 +13252,10 @@ internal struct Client: APIProtocol {
                 )
                 let body: OpenAPIRuntime.HTTPBody?
                 switch input.body {
+                case .none:
+                    body = nil
                 case let .urlEncodedForm(value):
-                    body = try converter.setRequiredRequestBodyAsURLEncodedForm(
+                    body = try converter.setOptionalRequestBodyAsURLEncodedForm(
                         value,
                         headerFields: &request.headerFields,
                         contentType: "application/x-www-form-urlencoded"
@@ -11684,6 +13334,8 @@ internal struct Client: APIProtocol {
     /// Start the clocks of a game immediately, even if a player has not yet made a move.
     /// Requires the OAuth tokens of both players with `challenge:write` scope.
     /// If the clocks have already started, the call will have no effect.
+    ///
+    /// For AI games with only one player, omit the `token2` parameter.
     ///
     ///
     /// - Remark: HTTP `POST /api/challenge/{gameId}/start-clocks`.
@@ -11846,7 +13498,8 @@ internal struct Client: APIProtocol {
     /// You can schedule up to 500 games every 10 minutes. [Contact us](mailto:contact@lichess.org) if you need higher limits.
     /// If games have a real-time clock, each player must have only one pairing.
     /// For correspondence games, players can have multiple pairings within the same bulk.
-    /// The entire bulk is rejected if:
+    ///
+    /// **The entire bulk is rejected if:**
     ///   - a token is missing
     ///   - a token is present more than once (except in correspondence)
     ///   - a token lacks the `challenge:write` scope
@@ -11855,6 +13508,7 @@ internal struct Client: APIProtocol {
     ///   - a bulk is already scheduled to start at the same time with the same player
     ///   - you have 20 scheduled bulks
     ///   - you have 1000 scheduled games
+    ///
     /// Partial bulks are never created. Either it all fails, or it all succeeds.
     /// When it fails, it does so with an error message explaining the issue.
     /// Failed bulks are not counted in the rate limiting, they are free.
@@ -12249,6 +13903,151 @@ internal struct Client: APIProtocol {
             }
         )
     }
+    /// Export games of a bulk pairing
+    ///
+    /// Download games of a bulk in PGN or [ndjson](#section/Introduction/Streaming-with-ND-JSON) format, depending on the request `Accept` header.
+    ///
+    ///
+    /// - Remark: HTTP `GET /api/bulk-pairing/{id}/games`.
+    /// - Remark: Generated from `#/paths//api/bulk-pairing/{id}/games/get(bulkPairingIdGamesGet)`.
+    internal func bulkPairingIdGamesGet(_ input: Operations.bulkPairingIdGamesGet.Input) async throws -> Operations.bulkPairingIdGamesGet.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.bulkPairingIdGamesGet.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/api/bulk-pairing/{}/games",
+                    parameters: [
+                        input.path.id
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "moves",
+                    value: input.query.moves
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "pgnInJson",
+                    value: input.query.pgnInJson
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "tags",
+                    value: input.query.tags
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "clocks",
+                    value: input.query.clocks
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "evals",
+                    value: input.query.evals
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "accuracy",
+                    value: input.query.accuracy
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "opening",
+                    value: input.query.opening
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "division",
+                    value: input.query.division
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "literate",
+                    value: input.query.literate
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let headers: Operations.bulkPairingIdGamesGet.Output.Ok.Headers = .init(Access_hyphen_Control_hyphen_Allow_hyphen_Origin: try converter.getOptionalHeaderFieldAsURI(
+                        in: response.headerFields,
+                        name: "Access-Control-Allow-Origin",
+                        as: Swift.String.self
+                    ))
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.bulkPairingIdGamesGet.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/x-chess-pgn",
+                            "application/x-ndjson"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/x-chess-pgn":
+                        body = try converter.getResponseBodyAsBinary(
+                            OpenAPIRuntime.HTTPBody.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .application_x_hyphen_chess_hyphen_pgn(value)
+                            }
+                        )
+                    case "application/x-ndjson":
+                        body = try converter.getResponseBodyAsBinary(
+                            OpenAPIRuntime.HTTPBody.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .application_x_hyphen_ndjson(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(
+                        headers: headers,
+                        body: body
+                    ))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// Add time to the opponent clock
     ///
     /// Add seconds to the opponent's clock. Can be used to create games with time odds.
@@ -12380,7 +14179,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            Operations.adminChallengeTokens.Output.Ok.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -12594,7 +14393,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            Components.Schemas.CloudEval.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -12607,6 +14406,28 @@ internal struct Client: APIProtocol {
                         headers: headers,
                         body: body
                     ))
+                case 404:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.apiCloudEval.Output.NotFound.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Operations.apiCloudEval.Output.NotFound.Body.jsonPayload.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .notFound(.init(body: body))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,
@@ -13245,8 +15066,10 @@ internal struct Client: APIProtocol {
     /// Start the OAuth2 Authorization Code Flow with PKCE by securely
     /// generating two random strings unique to each authorization
     /// request:
+    ///
     /// * `code_verifier`
     /// * `state`
+    ///
     /// Store these in session storage. Make sure not to reveal `code_verifier`
     /// to eavesdroppers. Do not show it in URLs, do not abuse `state` to store
     /// it, do not send it over insecure connections. However it is fine if
@@ -13256,16 +15079,21 @@ internal struct Client: APIProtocol {
     /// authorization and then be redirected back to the given `redirect_uri`.
     /// If the authorization failed, the following query string parameters will
     /// be appended to the redirection:
+    ///
     /// * `error`, in particular with value `access_denied` if the user
     ///    cancelled authorization
     /// * `error_description` to aid debugging
     /// * `state`, exactly as passed in the `state` parameter
+    ///
     /// If the authorization succeeded, the following query string parameters
     /// will be appended to the redirection:
+    ///
     /// * `code`, containing a fresh short-lived authorization code
     /// * `state`, exactly as passed in the `state` parameter
+    ///
     /// Next, to defend against cross site request forgery, check that the
     /// returned `state` matches the `state` you originally generated.
+    ///
     /// Finally, continue by using the authorization code to
     /// [obtain an access token](#operation/apiToken).
     ///
@@ -13415,7 +15243,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            Operations.apiToken.Output.Ok.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -13591,6 +15419,7 @@ internal struct Client: APIProtocol {
     /// Masters database
     ///
     /// **Endpoint: <https://explorer.lichess.ovh/masters>**
+    ///
     /// Example: `curl https://explorer.lichess.ovh/masters?play=d2d4,d7d5,c2c4,c7c6,c4d5`
     ///
     ///
@@ -13677,7 +15506,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.OpeningExplorerJson.self,
+                            Components.Schemas.OpeningExplorerMasters.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -13705,7 +15534,9 @@ internal struct Client: APIProtocol {
     /// Lichess games
     ///
     /// **Endpoint: <https://explorer.lichess.ovh/lichess>**
+    ///
     /// Games sampled from all Lichess players.
+    ///
     /// Example: `curl https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=2200,2500&fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201`
     ///
     ///
@@ -13827,7 +15658,7 @@ internal struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.OpeningExplorerJson.self,
+                            Components.Schemas.OpeningExplorerLichess.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -13855,13 +15686,17 @@ internal struct Client: APIProtocol {
     /// Player games
     ///
     /// **Endpoint: <https://explorer.lichess.ovh/player>**
+    ///
     /// Games of a Lichess player.
+    ///
     /// Responds with a stream of [newline delimited JSON](#section/Introduction/Streaming-with-ND-JSON). Will start indexing
     /// on demand, immediately respond with the current results, and stream
     /// more updates until indexing is complete. The stream is throttled
     /// and deduplicated. Empty lines may be sent to avoid timeouts.
+    ///
     /// Will index new games at most once per minute, and revisit previously
     /// ongoing games at most once every day.
+    ///
     /// Example: `curl https://explorer.lichess.ovh/player?player=revoof&color=white&play=d2d4,d7d5&recentGames=1`
     ///
     ///
@@ -13887,6 +15722,13 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "player",
                     value: input.query.player
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "color",
+                    value: input.query.color
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
@@ -13970,16 +15812,16 @@ internal struct Client: APIProtocol {
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
-                            "application/nd-json"
+                            "application/x-ndjson"
                         ]
                     )
                     switch chosenContentType {
-                    case "application/nd-json":
+                    case "application/x-ndjson":
                         body = try converter.getResponseBodyAsBinary(
                             OpenAPIRuntime.HTTPBody.self,
                             from: responseBody,
                             transforming: { value in
-                                .application_nd_hyphen_json(value)
+                                .application_x_hyphen_ndjson(value)
                             }
                         )
                     default:
@@ -14004,6 +15846,7 @@ internal struct Client: APIProtocol {
     /// OTB master game
     ///
     /// **Endpoint: `https://explorer.lichess.ovh/masters/pgn/{gameId}`**
+    ///
     /// Example: `curl https://explorer.lichess.ovh/masters/pgn/aAbqI4ey`
     ///
     ///
@@ -14175,6 +16018,13 @@ internal struct Client: APIProtocol {
                     method: .get
                 )
                 suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "fen",
+                    value: input.query.fen
+                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -14194,16 +16044,16 @@ internal struct Client: APIProtocol {
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
-                            "text/plain"
+                            "application/json"
                         ]
                     )
                     switch chosenContentType {
-                    case "text/plain":
-                        body = try converter.getResponseBodyAsBinary(
-                            OpenAPIRuntime.HTTPBody.self,
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.TablebaseJson.self,
                             from: responseBody,
                             transforming: { value in
-                                .plainText(value)
+                                .json(value)
                             }
                         )
                     default:
@@ -14246,6 +16096,13 @@ internal struct Client: APIProtocol {
                     method: .get
                 )
                 suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "fen",
+                    value: input.query.fen
+                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -14265,16 +16122,16 @@ internal struct Client: APIProtocol {
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
-                            "text/plain"
+                            "application/json"
                         ]
                     )
                     switch chosenContentType {
-                    case "text/plain":
-                        body = try converter.getResponseBodyAsBinary(
-                            OpenAPIRuntime.HTTPBody.self,
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.TablebaseJson.self,
                             from: responseBody,
                             transforming: { value in
-                                .plainText(value)
+                                .json(value)
                             }
                         )
                     default:

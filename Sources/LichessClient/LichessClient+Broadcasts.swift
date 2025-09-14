@@ -53,7 +53,7 @@ extension LichessClient {
   public func broadcastIndex(nb: Int = 20) async throws -> AsyncThrowingMapSequence<
     JSONLinesDeserializationSequence<HTTPBody>, LichessClient.TournamentResponse
   > {
-    let response = try await underlyingClient.broadcastIndex(query: .init(nb: nb))
+    let response = try await underlyingClient.broadcastsOfficial(query: .init(nb: nb))
     switch response {
     case .ok(let okResponse):
       let tournaments = try okResponse.body.application_x_hyphen_ndjson.asDecodedJSONLines(

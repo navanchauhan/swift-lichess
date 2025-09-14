@@ -45,6 +45,8 @@ extension LichessClient {
     case blessed_hyphen_loss
     case maybe_hyphen_loss
     case loss
+    case syzygy_hyphen_win
+    case syzygy_hyphen_loss
   }
 
   func convertCategoryTablebaseJson(payload: Components.Schemas.TablebaseJson.categoryPayload?)
@@ -68,6 +70,10 @@ extension LichessClient {
       return .maybe_hyphen_loss
     case .loss:
       return .loss
+    case .syzygy_hyphen_win:
+      return .syzygy_hyphen_win
+    case .syzygy_hyphen_loss:
+      return .syzygy_hyphen_loss
     }
   }
 
@@ -92,6 +98,10 @@ extension LichessClient {
       return .maybe_hyphen_loss
     case .loss:
       return .loss
+    case .syzygy_hyphen_loss:
+      return .syzygy_hyphen_loss
+    case .syzygy_hyphen_win:
+      return .syzygy_hyphen_win
     }
   }
 
