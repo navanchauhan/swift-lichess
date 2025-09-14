@@ -25,6 +25,16 @@ let package = Package(
                 .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
+        .executableTarget(
+            name: "PuzzlesExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/PuzzlesExample"
+        ),
+        .executableTarget(
+            name: "TVStreamExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/TVStreamExample"
+        ),
         .testTarget(
             name: "LichessClientTests",
             dependencies: ["LichessClient"]),

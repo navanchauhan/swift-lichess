@@ -102,3 +102,140 @@ for try await item in Streaming.ndjsonStream(from: body, as: Item.self) {
   print(item)
 }
 ```
+
+## Puzzles
+
+```swift
+let client = LichessClient()
+
+// Daily puzzle
+let daily = try await client.getDailyPuzzle()
+print(daily.puzzle.id, daily.puzzle.themes)
+
+// Puzzle by ID
+let p = try await client.getPuzzle(id: daily.puzzle.id)
+print(p.game.perf.name, p.puzzle.rating)
+
+// Next puzzle (optionally filter by theme)
+let next = try await client.getNextPuzzle(angle: "mateIn2")
+print(next.puzzle.id)
+```
+
+## Tablebase (Standard, Atomic, Antichess)
+
+```swift
+let client = LichessClient()
+let standard = try await client.getStandardTablebase(fen: "4k3/6KP/8/8/8/8/7p/8 w - - 0 1")
+print(standard.dtm ?? -1, standard.moves?.count ?? 0)
+
+// Variants
+let atomic = try await client.getAtomicTablebase(fen: "8/8/8/8/8/8/8/8 w - - 0 1")
+let antichess = try await client.getAntichessTablebase(fen: "8/8/8/8/8/8/8/8 w - - 0 1")
+```
+
+## Game/TV Streams
+
+```swift
+let client = LichessClient()
+
+// Stream one ongoing game
+let gameBody = try await client.streamGame(gameId: "abcdefgh")
+for try await event in Streaming.ndjsonStream(from: gameBody, as: Components.Schemas.GameStateEvent.self) {
+  print(event.moves)
+}
+
+// Stream current TV game
+let tvBody = try await client.streamTVFeed()
+for try await evt in Streaming.ndjsonStream(from: tvBody, as: Components.Schemas.GameFullEvent.self) {
+  print(evt.id)
+}
+```
+
+## Opening Explorer (Masters, Lichess, Player DB)
+
+```swift
+let client = LichessClient()
+
+// Masters DB
+let masters = try await client.getOpeningExplorerMasters(
+  fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  moves: 10,
+  topGames: 3
+)
+print(masters.moves.map(\.san))
+
+// Lichess DB with filters
+let lichess = try await client.getOpeningExplorerLichess(
+  variant: "standard",
+  fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  speeds: ["blitz", "rapid"],
+  ratings: [2200, 2500],
+  recentGames: 5,
+  history: true
+)
+print(lichess.topGames.count)
+
+// Player DB stream (NDJSON)
+let playerBody = try await client.streamOpeningExplorerPlayer(
+  player: "revoof",
+  color: "white",
+  play: ["d2d4", "d7d5"],
+  recentGames: 1
+)
+for try await item in Streaming.ndjsonStream(from: playerBody, as: Components.Schemas.OpeningExplorerPlayer.self) {
+  print(item)
+}
+```
+
+## Tournaments & Swiss
+
+```swift
+let client = LichessClient()
+
+// Arena export (PGN or NDJSON)
+let pgnBody = try await client.exportTournamentGames(id: "abcd1234", format: .pgn)
+let jsonBody = try await client.exportTournamentGames(id: "abcd1234", format: .ndjson)
+
+// Arena results (NDJSON)
+let results = try await client.streamTournamentResults(id: "abcd1234", nb: 100)
+for try await row in Streaming.ndjsonStream(from: results, as: Components.Schemas.OpenAPIRuntime.OpenAPIValueContainer.self) {
+  print(row)
+}
+
+// Swiss export & results
+_ = try await client.exportSwissGames(id: "j8rtJ5GL", format: .pgn)
+let swissResults = try await client.streamSwissResults(id: "j8rtJ5GL")
+```
+
+## Studies (PGN export, list, import)
+
+```swift
+let client = LichessClient(accessToken: "<study:read study:write>")
+
+// One chapter PGN
+let chapterPGN = try await client.getStudyChapterPGN(studyId: "lXnKRxIP", chapterId: "JT3RkEwv")
+
+// Whole study PGN
+let studyPGN = try await client.getStudyPGN(studyId: "lXnKRxIP")
+
+// List studies metadata (NDJSON)
+let metaBody = try await client.listUserStudiesMetadata(username: "thibault")
+
+// Import multiple PGN games as chapters
+let raw = "[Event \"A\"]\n\n1. e4 e5 *\n\n\n[Event \"B\"]\n\n1. d4 d5 *"
+let sanitized = PGNUtilities.sanitizeForImport(raw)
+let importResult = try await client.importPGNIntoStudy(studyId: "lXnKRxIP", pgn: sanitized)
+print(importResult.chapters.map { $0?.name ?? "-" })
+```
+
+## Diagnostics & Resilience
+
+```swift
+// Enable logging and rate limit handling
+let client = LichessClient(configuration: .init(
+  userAgent: "swift-lichess/1.0",
+  logging: .init(enabled: true, level: .info, logBodies: false),
+  retryPolicy: .init(maxAttempts: 3),
+  rateLimitPolicy: .init(maxRetries: 1, defaultDelaySeconds: 60)
+))
+```
