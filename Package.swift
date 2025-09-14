@@ -101,6 +101,11 @@ let package = Package(
             path: "Examples/TeamsExample"
         ),
         .executableTarget(
+            name: "UsersExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/UsersExample"
+        ),
+        .executableTarget(
             name: "BulkPairingExample",
             dependencies: ["LichessClient"],
             path: "Examples/BulkPairingExample"
