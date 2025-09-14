@@ -1,7 +1,6 @@
 import Foundation
 import LichessClient
 
-@main
 struct BoardExample {
   static func main() async {
     // Note: Most Board endpoints require an authenticated client with board/challenge scopes

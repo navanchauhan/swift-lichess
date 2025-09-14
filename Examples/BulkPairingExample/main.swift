@@ -1,7 +1,6 @@
 import Foundation
 import LichessClient
 
-@main
 struct BulkPairingExample {
   static func main() async {
     // Note: These endpoints require an authenticated client with `challenge:write` scope.

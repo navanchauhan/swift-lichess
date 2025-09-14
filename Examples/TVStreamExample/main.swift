@@ -3,7 +3,6 @@ import LichessClient
 
 struct TVEvent: Decodable { let type: String?; let id: String? }
 
-@main
 struct App {
   static func main() async {
     let client = LichessClient()

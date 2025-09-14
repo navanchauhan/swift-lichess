@@ -1,7 +1,6 @@
 import Foundation
 import LichessClient
 
-@main
 struct ChallengesExample {
   static func main() async {
     let client = LichessClient()

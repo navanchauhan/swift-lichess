@@ -1,7 +1,6 @@
 import Foundation
 import LichessClient
 
-@main
 struct AdminExample {
   static func main() async {
     // Requires an authenticated client with admin privileges.
