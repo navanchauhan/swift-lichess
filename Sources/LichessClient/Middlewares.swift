@@ -213,3 +213,51 @@ public actor AsyncSemaphore {
     }
   }
 }
+
+// MARK: - Rate limiting
+
+public struct RateLimitPolicy: Sendable, Equatable {
+  public var maxRetries: Int
+  public var defaultDelaySeconds: TimeInterval
+  public var respectRetryAfterHeader: Bool
+  public init(maxRetries: Int = 1, defaultDelaySeconds: TimeInterval = 60, respectRetryAfterHeader: Bool = true) {
+    self.maxRetries = max(0, maxRetries)
+    self.defaultDelaySeconds = max(0, defaultDelaySeconds)
+    self.respectRetryAfterHeader = respectRetryAfterHeader
+  }
+}
+
+public struct RateLimitMiddleware: ClientMiddleware {
+  let policy: RateLimitPolicy
+  public init(policy: RateLimitPolicy = RateLimitPolicy()) { self.policy = policy }
+  public func intercept(
+    _ request: HTTPRequest,
+    body: HTTPBody?,
+    baseURL: URL,
+    operationID: String,
+    next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
+  ) async throws -> (HTTPResponse, HTTPBody?) {
+    var attempts = 0
+    while true {
+      let (response, responseBody) = try await next(request, body, baseURL)
+      if response.status.code == 429, attempts < policy.maxRetries {
+        attempts += 1
+        let delay = retryAfterDelay(from: response.headerFields) ?? policy.defaultDelaySeconds
+        if delay > 0 {
+          try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        }
+        continue
+      }
+      return (response, responseBody)
+    }
+  }
+
+  private func retryAfterDelay(from headers: HTTPFields) -> TimeInterval? {
+    guard policy.respectRetryAfterHeader else { return nil }
+    if let name = HTTPField.Name("Retry-After"), let v = headers[name] {
+      if let secs = TimeInterval(v.trimmingCharacters(in: CharacterSet.whitespaces)) { return max(0, secs) }
+      // Could be an HTTP-date; ignore for simplicity
+    }
+    return nil
+  }
+}
