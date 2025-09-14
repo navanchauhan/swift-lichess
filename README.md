@@ -312,6 +312,20 @@ _ = try await client.exportSwissGames(id: "j8rtJ5GL", format: .pgn)
 let swissResults = try await client.streamSwissResults(id: "j8rtJ5GL")
 ```
 
+### Arena
+
+```swift
+let client = LichessClient()
+
+// Schedule
+let sched = try await client.getCurrentTournaments()
+print("upcoming:", sched.created.count)
+
+// Details
+let t = try await client.getArenaTournament(id: "abcd1234")
+print(t.name, t.clock.timeMinutes, t.clock.incrementSeconds)
+```
+
 ## Studies (PGN export, list, import)
 
 ```swift
