@@ -33,6 +33,7 @@ public struct LichessClient {
     public var tablebaseServerURL: URL
     public var transport: any ClientTransport
     public var middlewares: [any ClientMiddleware]
+    public var logging: LoggingConfiguration?
     public var accessToken: String?
     public var userAgent: String?
     public var maxConcurrentRequests: Int?
@@ -43,6 +44,7 @@ public struct LichessClient {
       tablebaseServerURL: URL = URL(string: "https://tablebase.lichess.ovh")!,
       transport: any ClientTransport = URLSessionTransport(),
       middlewares: [any ClientMiddleware] = [],
+      logging: LoggingConfiguration? = nil,
       accessToken: String? = nil,
       userAgent: String? = nil,
       maxConcurrentRequests: Int? = nil,
@@ -52,6 +54,7 @@ public struct LichessClient {
       self.tablebaseServerURL = tablebaseServerURL
       self.transport = transport
       self.middlewares = middlewares
+      self.logging = logging
       self.accessToken = accessToken
       self.userAgent = userAgent
       self.maxConcurrentRequests = maxConcurrentRequests
@@ -61,6 +64,9 @@ public struct LichessClient {
 
   public init(configuration: Configuration) {
     var mws: [any ClientMiddleware] = configuration.middlewares
+    if let log = configuration.logging, log.enabled {
+      mws.append(LoggingMiddleware(configuration: log))
+    }
     if let max = configuration.maxConcurrentRequests, max > 0 {
       mws.append(ConcurrencyLimitMiddleware(maxConcurrentRequests: max))
     }
