@@ -31,6 +31,11 @@ let package = Package(
             path: "Examples/PuzzlesExample"
         ),
         .executableTarget(
+            name: "PuzzlesRacerExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/PuzzlesRacerExample"
+        ),
+        .executableTarget(
             name: "TVStreamExample",
             dependencies: ["LichessClient"],
             path: "Examples/TVStreamExample"
