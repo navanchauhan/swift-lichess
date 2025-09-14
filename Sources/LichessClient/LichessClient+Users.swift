@@ -1,6 +1,53 @@
 import Foundation
 
 extension LichessClient {
+  // MARK: - Autocomplete
+  public enum AutocompleteResult: Sendable, Hashable { case usernames([String]); case users([AutocompleteUser]) }
+
+  public struct AutocompleteUser: Sendable, Hashable {
+    public let id: String
+    public let name: String
+    public let title: String?
+    public let patron: Bool?
+    public let flair: String?
+    public let online: Bool?
+  }
+
+  public func autocompletePlayers(
+    term: String,
+    object: Bool? = nil,
+    names: Bool? = nil,
+    friend: Bool? = nil,
+    team: String? = nil,
+    tour: String? = nil,
+    swiss: String? = nil
+  ) async throws -> AutocompleteResult {
+    let resp = try await underlyingClient.apiPlayerAutocomplete(
+      query: .init(term: term, object: object, names: names, friend: friend, team: team, tour: tour, swiss: swiss)
+    )
+    switch resp {
+    case .ok(let ok):
+      switch try ok.body.json {
+      case .case1(let names):
+        return .usernames(names)
+      case .case2(let payload):
+        let users: [AutocompleteUser] = (payload.result ?? []).map { lu in
+          let u = lu.value1
+          return AutocompleteUser(
+            id: u.id,
+            name: u.name,
+            title: u.title?.rawValue,
+            patron: u.patron,
+            flair: u.flair,
+            online: lu.value2.online
+          )
+        }
+        return .users(users)
+      }
+    case .undocumented(let s, _):
+      throw LichessClientError.undocumentedResponse(statusCode: s)
+    }
+  }
   public struct PublicUser: Sendable, Hashable {
     public let id: String
     public let username: String
@@ -71,4 +118,3 @@ extension LichessClient {
     }
   }
 }
-

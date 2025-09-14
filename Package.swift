@@ -41,6 +41,11 @@ let package = Package(
             path: "Examples/TVChannelsExample"
         ),
         .executableTarget(
+            name: "AutocompleteExample",
+            dependencies: ["LichessClient"],
+            path: "Examples/AutocompleteExample"
+        ),
+        .executableTarget(
             name: "OpeningExplorerExample",
             dependencies: ["LichessClient"],
             path: "Examples/OpeningExplorerExample"
