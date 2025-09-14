@@ -149,6 +149,18 @@ let tvBody = try await client.streamTVFeed()
 for try await evt in Streaming.ndjsonStream(from: tvBody, as: Components.Schemas.GameFullEvent.self) {
   print(evt.id)
 }
+
+// TV channels and per-channel games
+let tv = try await client.getTVChannels()
+for (channel, game) in tv.entries { print(channel, game.user.name, game.rating) }
+
+// Stream a specific channel feed (NDJSON)
+let chBody = try await client.streamTVChannelFeed(channel: "rapid")
+struct TVMin: Decodable { let t: String? }
+for try await item in Streaming.ndjsonStream(from: chBody, as: TVMin.self) { print(item.t ?? "-"); break }
+
+// Fetch best ongoing Blitz games (PGN or NDJSON via `format`)
+_ = try await client.getTVChannelGames(channel: "blitz", format: .pgn, nb: 10)
 ```
 
 ## Opening Explorer (Masters, Lichess, Player DB)
