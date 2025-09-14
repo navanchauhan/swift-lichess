@@ -2,6 +2,16 @@ import Foundation
 import OpenAPIRuntime
 import OpenAPIURLSession
 
+/// A typed, async Swift client for the public Lichess HTTP API.
+///
+/// - Features:
+///   - 100% coverage of the Lichess OpenAPI 2.0 surface via generated bindings.
+///   - Small, well‑named convenience wrappers with sensible defaults.
+///   - Pluggable middlewares for logging, retries, rate limiting, auth, and concurrency limits.
+///   - Separate base URL handling for the Tablebase endpoints.
+///
+/// Use ``LichessClient/init()`` for a default unauthenticated client, or
+/// ``LichessClient/init(configuration:)`` to customize transport, headers, policies, and auth.
 public struct LichessClient {
   // Lichess has a separate endpoint for its tablebase server
   internal let underlyingClient: any APIProtocol
@@ -12,6 +22,10 @@ public struct LichessClient {
     self.underlyingTablebaseClient = underlyingTablebaseClient
   }
 
+  /// Create a client that talks to the public Lichess servers using `URLSession`.
+  ///
+  /// This initializer is unauthenticated. For authenticated requests provide an
+  /// access token using ``LichessClient/init(configuration:)`` or ``LichessClient/init(accessToken:)``.
   public init() {
     self.init(
       underlyingClient: Client(
@@ -21,6 +35,7 @@ public struct LichessClient {
     )
   }
 
+  /// Errors surfaced by ``LichessClient`` wrappers.
   public enum LichessClientError: Error, Sendable, CustomStringConvertible {
     case undocumentedResponse(statusCode: Int)
     case parsingError(error: Error)
@@ -44,6 +59,12 @@ public struct LichessClient {
 
   // MARK: - Configuration
 
+  /// Configuration for a ``LichessClient`` instance.
+  ///
+  /// You can customize the server URLs, supply a custom transport, add
+  /// middlewares, turn on structured logging, and configure retry and rate
+  /// limiting policies. For convenience, you can also pass a personal access
+  /// token and a custom user‑agent string here.
   public struct Configuration: Sendable {
     public var serverURL: URL
     public var tablebaseServerURL: URL
@@ -56,6 +77,18 @@ public struct LichessClient {
     public var retryPolicy: RetryPolicy?
     public var rateLimitPolicy: RateLimitPolicy?
 
+    /// Create a configuration.
+    /// - Parameters:
+    ///   - serverURL: Base URL for the main Lichess API.
+    ///   - tablebaseServerURL: Base URL for the Tablebase API.
+    ///   - transport: HTTP client transport (defaults to `URLSession`).
+    ///   - middlewares: Additional middlewares to install.
+    ///   - logging: Optional request/response logging configuration.
+    ///   - accessToken: Optional bearer token used for authenticated requests.
+    ///   - userAgent: Optional `User-Agent` header value.
+    ///   - maxConcurrentRequests: Limit of in‑flight requests when set (> 0).
+    ///   - retryPolicy: Optional exponential backoff retry policy.
+    ///   - rateLimitPolicy: Optional policy to respect `429` rate limits.
     public init(
       serverURL: URL = URL(string: "https://lichess.org")!,
       tablebaseServerURL: URL = URL(string: "https://tablebase.lichess.ovh")!,
@@ -81,6 +114,7 @@ public struct LichessClient {
     }
   }
 
+  /// Create a client using a custom ``Configuration``.
   public init(configuration: Configuration) {
     var mws: [any ClientMiddleware] = configuration.middlewares
     if let log = configuration.logging, log.enabled {
@@ -112,6 +146,9 @@ public struct LichessClient {
     )
   }
 
+  /// Create an authenticated client using a personal access token.
+  ///
+  /// Equivalent to `LichessClient(configuration: .init(accessToken: token))`.
   public init(accessToken: String) {
     self.init(configuration: .init(accessToken: accessToken))
   }

@@ -2,6 +2,7 @@ import Foundation
 import OpenAPIRuntime
 import HTTPTypes
 
+/// Configuration for ``LoggingMiddleware``.
 public struct LoggingConfiguration: Sendable {
   public enum Level: String, Sendable { case info, debug }
   public var enabled: Bool
@@ -9,6 +10,13 @@ public struct LoggingConfiguration: Sendable {
   public var logBodies: Bool
   public var redactHeaders: [HTTPField.Name]
   public var sink: @Sendable (String) -> Void
+  /// Create a logging configuration.
+  /// - Parameters:
+  ///   - enabled: When `true`, requests and responses are logged.
+  ///   - level: Log level tag included in messages.
+  ///   - logBodies: When `true`, bodies are logged in a redacted/preview form.
+  ///   - redactHeaders: Header names to redact in logs (e.g. `.authorization`).
+  ///   - sink: Destination for log lines, defaults to `print`.
   public init(
     enabled: Bool = false,
     level: Level = .info,
@@ -24,6 +32,7 @@ public struct LoggingConfiguration: Sendable {
   }
 }
 
+/// Logs outgoing requests and their responses.
 public struct LoggingMiddleware: ClientMiddleware {
   let configuration: LoggingConfiguration
   public init(configuration: LoggingConfiguration = LoggingConfiguration(enabled: true)) {
@@ -79,6 +88,7 @@ public struct LoggingMiddleware: ClientMiddleware {
   }
 }
 
+/// Adds a `Bearer` token to the `Authorization` header.
 public struct TokenAuthMiddleware: ClientMiddleware {
   public let token: String
   public init(token: String) { self.token = token }
@@ -95,6 +105,7 @@ public struct TokenAuthMiddleware: ClientMiddleware {
   }
 }
 
+/// Sets a custom `User-Agent` header for all requests.
 public struct UserAgentMiddleware: ClientMiddleware {
   public let userAgent: String
   public init(userAgent: String) { self.userAgent = userAgent }
@@ -111,11 +122,18 @@ public struct UserAgentMiddleware: ClientMiddleware {
   }
 }
 
+/// Exponential backoff policy for network retries.
 public struct RetryPolicy: Sendable, Equatable {
   public var maxAttempts: Int
   public var baseDelay: TimeInterval
   public var jitter: TimeInterval
   public var retryOnStatusCodes: Set<Int>
+  /// Create a retry policy.
+  /// - Parameters:
+  ///   - maxAttempts: Maximum attempts including the first try.
+  ///   - baseDelay: Initial delay before the first retry.
+  ///   - jitter: Randomization added to the delay to avoid thundering herds.
+  ///   - retryOnStatusCodes: HTTP status codes that should be retried.
   public init(
     maxAttempts: Int = 3,
     baseDelay: TimeInterval = 0.25,
@@ -129,6 +147,7 @@ public struct RetryPolicy: Sendable, Equatable {
   }
 }
 
+/// Retries failed requests according to a ``RetryPolicy``.
 public struct RetryMiddleware: ClientMiddleware {
   public let policy: RetryPolicy
   public init(policy: RetryPolicy = RetryPolicy()) { self.policy = policy }
@@ -171,6 +190,7 @@ public struct RetryMiddleware: ClientMiddleware {
   }
 }
 
+/// Limits the number of concurrent in‑flight requests.
 public struct ConcurrencyLimitMiddleware: ClientMiddleware {
   let gate: AsyncSemaphore
   public init(maxConcurrentRequests: Int) { self.gate = AsyncSemaphore(value: Swift.max(1, maxConcurrentRequests)) }
@@ -187,6 +207,7 @@ public struct ConcurrencyLimitMiddleware: ClientMiddleware {
   }
 }
 
+/// A simple async semaphore used to gate concurrent requests.
 public actor AsyncSemaphore {
   private let capacity: Int
   private var available: Int
@@ -216,6 +237,7 @@ public actor AsyncSemaphore {
 
 // MARK: - Rate limiting
 
+/// Policy controlling behaviour on `429 Too Many Requests`.
 public struct RateLimitPolicy: Sendable, Equatable {
   public var maxRetries: Int
   public var defaultDelaySeconds: TimeInterval
@@ -227,6 +249,7 @@ public struct RateLimitPolicy: Sendable, Equatable {
   }
 }
 
+/// Retries `429` responses with an optional delay derived from `Retry-After`.
 public struct RateLimitMiddleware: ClientMiddleware {
   let policy: RateLimitPolicy
   public init(policy: RateLimitPolicy = RateLimitPolicy()) { self.policy = policy }
