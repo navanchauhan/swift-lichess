@@ -65,6 +65,21 @@ let me = try await client.getMyProfile()
 let email = try await client.getMyEmail()
 ```
 
+### Autocomplete
+
+```swift
+let client = LichessClient()
+
+// Get usernames or user objects matching a prefix
+let ac = try await client.autocompletePlayers(term: "magn", object: true)
+switch ac {
+case .usernames(let names):
+  print(names.prefix(5))
+case .users(let users):
+  print(users.prefix(5).map(\.name))
+}
+```
+
 ## Account
 
 ```swift
