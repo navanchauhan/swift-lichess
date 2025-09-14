@@ -172,6 +172,13 @@ for try await evt in Streaming.ndjsonStream(from: tvBody, as: Components.Schemas
   print(evt.id)
 }
 
+// Incoming events stream (NDJSON)
+let evBody = try await client.streamIncomingEvents()
+struct Incoming: Decodable { let type: String }
+for try await e in Streaming.ndjsonStream(from: evBody, as: Incoming.self) {
+  print(e.type); break
+}
+
 // TV channels and per-channel games
 let tv = try await client.getTVChannels()
 for (channel, game) in tv.entries { print(channel, game.user.name, game.rating) }
